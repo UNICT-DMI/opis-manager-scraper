@@ -1,8 +1,5 @@
 <?php
-$host = 'localhost';
-$username = 'root';
-$password = 'password';
-$db_name = 'opis_db';
+include "credentials.php";
 
 $link = "";
 $year = "";
