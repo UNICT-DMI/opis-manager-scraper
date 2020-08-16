@@ -64,7 +64,7 @@ function insegnamento($unict_id_cds, $primary_id_cds) {
 
             // extract link_opis
             $link_opis = "";
-            $emptyOPIS= $xpath->query('/html/body/table[2]/tr/td/table/tr[' . $i . ']/td[15]')->item(0)->firstChild->nodeName;
+            $emptyOPIS = $xpath->query('/html/body/table[2]/tr/td/table/tr[' . $i . ']/td[15]')->item(0)->firstChild->nodeName;
 
             if ($_cod_modulo == "" || $_cod_modulo == " ") {
                 $_cod_modulo = "0";
@@ -93,7 +93,6 @@ function insegnamento($unict_id_cds, $primary_id_cds) {
 
             if (!$mysqli->query($query)) 
                 die($mysqli->error);
-
 
             if ($emptyOPIS == 'img') {
                 $link_opis = "Scheda non autorizzata alla pubblicazione";
@@ -188,10 +187,10 @@ function oldinsegnamento($unict_id_cds, $primary_id_cds) {
             // extract link_opis
             $link_opis = "";
             if($year == "2015/2016"){
-                $emptyOPIS = $xpath->query('/html/body/table[2]/tr/td/table/tr[' . $i . ']/td[15]')->item(0)->firstChild->nodeName; // non frequentanti
+                $emptyOPIS = $xpath->query('/html/body/table[2]/tr/td/table/tr[' . $i . ']/td[15]')->item(0)->firstChild;
             }
             else {
-                $emptyOPIS= $xpath->query('/html/body/table[2]/tr/td/table/tr[' . $i . ']/td[10]')->item(0)->firstChild->nodeName;
+                $emptyOPIS= $xpath->query('/html/body/table[2]/tr/td/table/tr[' . $i . ']/td[10]')->item(0)->firstChild;
                 if ($year == "2014/2015") {
                     $_id = substr($_id, 0, -2);
                 }
@@ -273,14 +272,7 @@ function oldinsegnamento($unict_id_cds, $primary_id_cds) {
                 if (!$mysqli->query($query))
                     die($mysqli->error);
             }*/
-
-            if ($emptyOPIS == 'img') {
-                $link_opis="Scheda non autorizzata alla pubblicazione";
-            }
-            else if ($emptyOPIS == '#text') {
-                $link_opis="Nessun report perché numero di schede insuff.";
-            }
-            else if ($emptyOPIS == 'a') {
+            if ($emptyOPIS->nodeName == 'a' && $emptyOPIS->firstChild->attributes->getNamedItem("title")->nodeValue != "pubblicazione report non autorizzata") {
                 if($year != "2015/2016")
                     $link_opis = $xpath->query('/html/body/table[2]/tr/td/table/tr[' . $i . ']/td[10]/a')->item(0)->attributes->item(0)->textContent;
                 else{
