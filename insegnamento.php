@@ -293,8 +293,10 @@ function oldinsegnamento($unict_id_cds, $primary_id_cds) {
 
                 if($year != "2015/2016")
                     oldschede($primary_id, $params[0], $params[1], $params[2]);
-                else
+                else {
+                    $params[3] = str_replace(" ", "%20", $params[3]);
                     schede($primary_id, $params[0], $params[1], $params[2], $params[3]);
+                }
             }
 
         }
