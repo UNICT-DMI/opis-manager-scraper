@@ -31,7 +31,7 @@ function oldcds($unict_id_dip, $primary_id_dip) // come cds() ma serve per gli a
 
         $id = get_primary_id($unict_id_cds, 'corso_di_studi');
 
-        echo "\n\n ###  " . ($j-1) . "/" . ($lengthN-2) . "\t \033[36m"  . $_nome . " ". $_classe ."\033[0m\n";
+        echo "\n\n ##  " . ($j-1) . "/" . ($lengthN-2) . "\t \033[36m"  . $_nome . " ". $_classe ."\033[0m"  . "\t[" . $year . "]\n";
         oldinsegnamento($unict_id_cds, $id);
     }
 }
@@ -64,7 +64,7 @@ function cds($unict_id_dip, $primary_id_dip)
 
         $id = get_primary_id($unict_id_cds, 'corso_di_studi');
 
-        echo "\n\n ###  " . ($j-1) . "/" . ($lengthN-2) . "\t \033[36m"  . $_nome . "\033[0m\n";
+        echo "\n\n ###  " . ($j-1) . "/" . ($lengthN-2) . "\t \033[36m"  . $_nome . "\033[0m" . "\t[" . $year . "]\n";
         insegnamento($unict_id_cds, $id);
 
     }

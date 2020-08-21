@@ -33,7 +33,7 @@ function dip(): void
           $link_opis = $xpath->query('/html/body/table[2]/tr/td/table/tr[' . $i . ']/td[8]/a');
         }
 
-        echo "\n  ## \033[1m" . ($i-1) . "/" . ($lengthN-2) . "\033[33m\t " . $_nome . "\033[0m\n";
+        echo "\n  # \033[1m" . ($i-1) . "/" . ($lengthN-2) . "\033[33m\t " . $_nome . "\033[0m" ."\t[" . $year . "]\n";
 
         $query  = "INSERT INTO dipartimento (unict_id, anno_accademico, nome) VALUES\n";
         $query .= '("' . $unict_id . '","' . $year . '","' . addslashes($_nome) . '");';
