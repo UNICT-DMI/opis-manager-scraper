@@ -1,0 +1,21 @@
+{
+    "name": "OPIS Python Scraper",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.formatting.provider": "black",
+                "editor.formatOnSave": true
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "njpwerner.autodocstring",
+                "donjayamanne.python-extension-pack"
+            ]
+        }
+    },
+    "postCreateCommand": "pip install --user -r requirements.txt",
+    "remoteUser": "vscode"
+}
