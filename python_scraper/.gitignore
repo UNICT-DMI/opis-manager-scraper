@@ -30,3 +30,7 @@ env/
 ENV/
 
 .vscode/
+
+.coverage
+.pytest_cache/
+calc_cov/
