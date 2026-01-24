@@ -11,8 +11,11 @@
             "extensions": [
                 "ms-python.python",
                 "ms-python.vscode-pylance",
+                "ms-python.debugpy",
+                "ms-python.black-formatter",
                 "njpwerner.autodocstring",
-                "donjayamanne.python-extension-pack"
+                "GitHub.copilot-chat",
+                "KevinRose.vsc-python-indent"
             ]
         }
     },
