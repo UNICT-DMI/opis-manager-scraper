@@ -1,10 +1,14 @@
 import requests
 from typing import List
-from .models import Dipartimento, CorsoDiStudi
-from src.transformers import parse_course_name
+from .models import Dipartimento, CorsoDiStudi, Insegnamento
+from src.transformers import parse_course_name, parse_insegnamento_data
 
 
 BASE_URL = "https://public.smartedu.unict.it/EnqaDataViewer"
+HEADERS = {
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
 
 
 def get_departments(year: int) -> List[Dipartimento]:
@@ -15,14 +19,9 @@ def get_departments(year: int) -> List[Dipartimento]:
         "academicYear": year
     }
 
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-
     try:
         response = requests.post(
-            url, json=payload, headers=headers, timeout=10)
+            url, json=payload, headers=HEADERS, timeout=10)
         response.raise_for_status()
 
         data = response.json()
@@ -60,14 +59,9 @@ def get_courses(year: int, department_code: int) -> List[CorsoDiStudi]:
         "departmentCode": str(department_code)
     }
 
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-
     try:
         response = requests.post(
-            url, json=payload, headers=headers, timeout=10)
+            url, json=payload, headers=HEADERS, timeout=10)
         response.raise_for_status()
 
         data = response.json()
@@ -97,4 +91,51 @@ def get_courses(year: int, department_code: int) -> List[CorsoDiStudi]:
 
     except requests.exceptions.RequestException as e:
         print(f"Errore API Corsi (Dip: {department_code}, Anno: {year}): {e}")
+        return []
+
+
+def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnamento]:
+
+    url = f"{BASE_URL}/getActivities"
+
+    payload = {
+        "surveys": "",
+        "academicYear": year,
+        "departmentCode": str(dept_code),
+        "courseCode": course_code
+    }
+
+    try:
+        response = requests.post(
+            url, json=payload, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        items = data.get("data", [])
+
+        insegnamenti = []
+        formatted_year = f"{year}/{year + 1}"
+
+        for item in items:
+            if item.get("activityCode") is None:
+                continue
+
+            insegnamento_data = parse_insegnamento_data(item)
+
+            insegnamento = Insegnamento(
+                codice_gomp=insegnamento_data["codice_gomp"],
+                id_cds=course_code,
+                anno_accademico=formatted_year,
+                nome=insegnamento_data["nome"],
+                docente=insegnamento_data["docente"],
+                canale=insegnamento_data["canale"],
+                id_modulo=insegnamento_data["id_modulo"],
+                ssd=insegnamento_data["ssd"]
+            )
+            insegnamenti.append(insegnamento)
+
+        return insegnamenti
+    except requests.exceptions.RequestException as e:
+        print(
+            f"Errore API Insegnamenti (Corso: {course_code}, Dip: {dept_code}, Anno: {year}): {e}")
         return []
