@@ -1,6 +1,6 @@
 import pytest
 from typing import Optional
-from src.transformers import parse_course_name
+from src.transformers import parse_course_name, parse_insegnamento_data
 
 
 @pytest.mark.parametrize(
@@ -28,3 +28,77 @@ def test_parse_course_name(
     assert classe == expected_classe
     assert nome == expected_nome
     assert classe == expected_classe
+
+
+@pytest.mark.parametrize(
+    "input_data, expected_dict",
+    [
+        (
+            {
+                "activityCode": "1001",
+                "activityName": "TEST NULL",
+                "professorName": "MARIO",
+                "professorLastName": "ROSSI",
+                "channel": None,
+                "partCode": None,
+                "SSDsigla": None
+            },
+            {
+                "codice_gomp": 1001,
+                "nome": "TEST NULL",
+                "docente": "ROSSI MARIO",
+                "canale": "no",
+                "id_modulo": 0,
+                "ssd": None
+            }
+        ),
+        (
+            {
+                "activityCode": "9999",
+                "activityName": "TEST FULL",
+                "professorName": "LUIGI",
+                "professorLastName": "VERDI",
+                "channel": "A-L",
+                "partCode": "123",
+                "SSDsigla": "INF/01"
+            },
+            {
+                "codice_gomp": 9999,
+                "nome": "TEST FULL",
+                "docente": "VERDI LUIGI",
+                "canale": "A-L",
+                "id_modulo": 123,
+                "ssd": "INF/01"
+            }
+        ),
+        (
+            {
+                "activityCode": 1234,
+                "activityName": "TEST id_modulo EXCEPTION",
+                "professorName": "ANNA",
+                "professorLastName": "BIONDI",
+                "channel": "",
+                "partCode": "abc",
+                "SSDsigla": "MAT/02"
+            },
+            {
+                "codice_gomp": 1234,
+                "nome": "TEST id_modulo EXCEPTION",
+                "docente": "BIONDI ANNA",
+                "canale": "no",
+                "id_modulo": 0,
+                "ssd": "MAT/02"
+            }
+        )
+    ]
+)
+def test_parse_insegnamento_data(
+    input_data: dict,
+    expected_dict: dict
+) -> None:
+
+    # act
+    result = parse_insegnamento_data(input_data)
+
+    # assert
+    assert result == expected_dict
