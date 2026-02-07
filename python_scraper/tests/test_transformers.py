@@ -1,6 +1,6 @@
 import pytest
-from typing import Optional
-from src.transformers import parse_course_name, parse_insegnamento_data
+from typing import Any, Optional
+from src.transformers import parse_course_name, parse_insegnamento_data, parse_scheda_opis_data
 
 
 @pytest.mark.parametrize(
@@ -102,3 +102,94 @@ def test_parse_insegnamento_data(
 
     # assert
     assert result == expected_dict
+
+
+@pytest.fixture
+def mock_opis_json() -> dict[str, Any]:
+    return {
+        "clusterData": [
+            {
+                "cluster": {"Text": "Studenti Frequentanti"},
+                "questions": [
+                    {
+                        "questionCode": "1",
+                        "submissions": 10,
+                        "answers": [
+                            {"answerCode": "R1", "count": 2},
+                            {"answerCode": "R4", "count": 8}
+                        ]
+                    },
+                    {
+                        "questionCode": "2",
+                        "submissions": 10,
+                        "answers": [
+                            {"answerCode": "R3", "count": 5},
+                            {"answerCode": "R6", "count": 99}
+                        ]
+                    },
+                    {
+                        "questionCode": "3", 
+                        "submissions": 12,
+                        "answers": []
+                    },
+                    {
+                        "questionCode": "abc", 
+                        "submissions": 0,
+                        "answers": []
+                    },
+                    {
+                        "questionCode": "15", 
+                        "submissions": 0,
+                        "answers": []
+                    },
+                    {
+                        "questionCode": None,
+                        "submissions": 0,
+                        "answers": []
+                    }
+                ]
+            }
+        ],
+        "graphPieList": [
+            {
+                "name": "Studenti Frequentanti",
+                "dataPie": [
+                    {
+                        "datasets": [
+                            {
+                                "label": "Distribuzione -Età anagrafica",
+                                "data": [5.0, 3.0]
+                            }
+                        ],
+                        "labels": ["20-21", "22-23"]
+                    }
+                ]
+            },
+            {
+                "name": "Non Frequentanti",
+                "dataPie": [{"datasets": [{"label": "Età", "data": [100.0]}], "labels": ["99"]}]
+            }
+        ]
+    }
+
+def test_parse_scheda_opis_data(mock_opis_json: dict[str, Any]) -> None:
+    
+    # act
+    results = parse_scheda_opis_data(mock_opis_json)
+    
+    # assert
+    assert len(results) == 1
+    scheda = results[0]
+    assert scheda["tipo_scheda"] == "Studenti Frequentanti"
+    assert scheda["totale_schede"] == 12
+    assert len(scheda["domande"]) == 60
+    assert scheda["domande"][0] == 2
+    assert scheda["domande"][1] == 0
+    assert scheda["domande"][3] == 8
+    assert scheda["domande"][7] == 5
+    assert sum(scheda["domande"]) == 15
+    assert scheda["eta"] is not None
+    assert isinstance(scheda["eta"], dict)
+    assert scheda["eta"]["20-21"] == 5
+    assert scheda["eta"]["22-23"] == 3
+    assert "99" not in scheda["eta"]
