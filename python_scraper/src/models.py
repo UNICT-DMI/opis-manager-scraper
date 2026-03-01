@@ -25,6 +25,8 @@ class Insegnamento:
     anno_accademico: str
     nome: str
     docente: str
+    # Campo Transitorio
+    professor_tax: str
 
     anno: str = ""
     semestre: str = ""

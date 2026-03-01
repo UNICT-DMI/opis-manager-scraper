@@ -44,7 +44,8 @@ def parse_insegnamento_data(item: Dict[str, Any]) -> Dict[str, Any]:
         "docente": docente_full,
         "canale": canale,
         "id_modulo": id_modulo,
-        "ssd": item.get("SSDsigla")
+        "ssd": item.get("SSDsigla"),
+        "professor_tax": item.get("professorTaxCode", "")
     }
     
     

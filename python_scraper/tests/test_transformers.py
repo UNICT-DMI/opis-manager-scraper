@@ -39,6 +39,7 @@ def test_parse_course_name(
                 "activityName": "TEST NULL",
                 "professorName": "MARIO",
                 "professorLastName": "ROSSI",
+                "professorTaxCode": "",
                 "channel": None,
                 "partCode": None,
                 "SSDsigla": None
@@ -49,7 +50,8 @@ def test_parse_course_name(
                 "docente": "ROSSI MARIO",
                 "canale": "no",
                 "id_modulo": 0,
-                "ssd": None
+                "ssd": None,
+                "professor_tax": ""
             }
         ),
         (
@@ -58,6 +60,7 @@ def test_parse_course_name(
                 "activityName": "TEST FULL",
                 "professorName": "LUIGI",
                 "professorLastName": "VERDI",
+                "professorTaxCode": "",
                 "channel": "A-L",
                 "partCode": "123",
                 "SSDsigla": "INF/01"
@@ -68,7 +71,8 @@ def test_parse_course_name(
                 "docente": "VERDI LUIGI",
                 "canale": "A-L",
                 "id_modulo": 123,
-                "ssd": "INF/01"
+                "ssd": "INF/01",
+                "professor_tax": ""
             }
         ),
         (
@@ -77,6 +81,7 @@ def test_parse_course_name(
                 "activityName": "TEST id_modulo EXCEPTION",
                 "professorName": "ANNA",
                 "professorLastName": "BIONDI",
+                "professorTaxCode": "",
                 "channel": "",
                 "partCode": "abc",
                 "SSDsigla": "MAT/02"
@@ -87,7 +92,8 @@ def test_parse_course_name(
                 "docente": "BIONDI ANNA",
                 "canale": "no",
                 "id_modulo": 0,
-                "ssd": "MAT/02"
+                "ssd": "MAT/02",
+                "professor_tax": ""
             }
         )
     ]
