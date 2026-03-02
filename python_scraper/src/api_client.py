@@ -10,6 +10,9 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
+session = requests.Session()
+session.headers.update(HEADERS)
+
 
 def get_departments(year: int) -> List[Dipartimento]:
     url = f"{BASE_URL}/getDepartments"
@@ -20,8 +23,8 @@ def get_departments(year: int) -> List[Dipartimento]:
     }
 
     try:
-        response = requests.post(
-            url, json=payload, headers=HEADERS, timeout=10)
+        response = session.post(
+            url, json=payload, timeout=30)
         response.raise_for_status()
 
         data = response.json()
@@ -60,8 +63,8 @@ def get_courses(year: int, department_code: int) -> List[CorsoDiStudi]:
     }
 
     try:
-        response = requests.post(
-            url, json=payload, headers=HEADERS, timeout=10)
+        response = session.post(
+            url, json=payload, timeout=30)
         response.raise_for_status()
 
         data = response.json()
@@ -106,8 +109,8 @@ def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnam
     }
 
     try:
-        response = requests.post(
-            url, json=payload, headers=HEADERS, timeout=10)
+        response = session.post(
+            url, json=payload, timeout=30)
         response.raise_for_status()
 
         data = response.json()
@@ -157,7 +160,7 @@ def get_questions(year: int, dept_code: int, course_code: str, activity_code: in
     }
     
     try:
-        response = requests.post(url, json=payload, headers=HEADERS, timeout=10)
+        response = session.post(url, json=payload, timeout=45)
         response.raise_for_status()
         data = response.json()
     except requests.exceptions.RequestException as e:
