@@ -1,20 +1,22 @@
-from src.api_client import get_departments
+import logging
+from src.scraper import run_scraper
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 def main():
-    print("Avvio scraper OPIS...")
+    logger.info("Inizializzazione Opis Manager Scraper...")
 
-    anno_target = 2023
-    print(f"Scarico i dipartimenti per l'anno {anno_target}...")
-
-    departments = get_departments(anno_target)
-
-    print(f"Trovati {len(departments)} dipartimenti.")
-
-    # Stampiamo i primi 3 per verifica
-    for dip in departments[:3]:
-        print(f"- [{dip.unict_id}] {dip.nome} ({dip.anno_accademico})")
+    try:
+        run_scraper()
+        logger.info("Estrazione dati completata con successo.")
+    
+    except KeyboardInterrupt:
+        logger.warning("Estrazione interrotta manualmente.")
+    except Exception as e:
+        logger.error(f"Errore critico durante l'esecuzione: {e}", exc_info=True)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     main()
