@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Any, Optional, List, Dict
 
 
 @dataclass
@@ -42,8 +42,23 @@ class Insegnamento:
 class SchedaOpis:
     anno_accademico: str
     id_insegnamento: int
-    tipo_scheda: str
     totale_schede: int
+    totale_schede_nf: int
+    fc: int
+    inatt_nf: int
+
     domande: List[int]
+    domande_nf: List[int]
+    motivo_nf: List[str]  # ?
+    sugg: List[str]  # ?
+    sugg_nf: List[str]  # ?
 
     eta: Optional[dict[str, int]] = None
+    inatt: Optional[int] = None
+    femmine: Optional[int] = None
+    femmine_nf: Optional[int] = None
+    anno_iscr: Optional[Any] = None
+    num_studenti: Optional[Any] = None
+    ragg_uni: Optional[Any] = None
+    studio_gg: Optional[Any] = None
+    studio_tot: Optional[Any] = None
