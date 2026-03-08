@@ -38,8 +38,8 @@ def parse_course_name(full_name: str) -> Tuple[str, str]:
 
 
 def parse_insegnamento_data(item: Dict[str, Any]) -> Dict[str, Any]:
-    cognome = item.get("professorLastName")
-    nome = item.get("professorName")
+    cognome = item.get("professorLastName") or ""
+    nome = item.get("professorName") or ""
     docente_full = f"{cognome} {nome}".strip()
 
     canale = item.get("channel")
