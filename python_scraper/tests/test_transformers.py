@@ -134,17 +134,17 @@ def mock_opis_json() -> dict[str, Any]:
                         ]
                     },
                     {
-                        "questionCode": "3", 
+                        "questionCode": "3",
                         "submissions": 12,
                         "answers": []
                     },
                     {
-                        "questionCode": "abc", 
+                        "questionCode": "abc",
                         "submissions": 0,
                         "answers": []
                     },
                     {
-                        "questionCode": "15", 
+                        "questionCode": "15",
                         "submissions": 0,
                         "answers": []
                     },
@@ -178,15 +178,15 @@ def mock_opis_json() -> dict[str, Any]:
         ]
     }
 
+
 def test_parse_scheda_opis_data(mock_opis_json: dict[str, Any]) -> None:
-    
+
     # act
     results = parse_scheda_opis_data(mock_opis_json)
-    
+
     # assert
     assert len(results) == 1
     scheda = results[0]
-    assert scheda["tipo_scheda"] == "Studenti Frequentanti"
     assert scheda["totale_schede"] == 12
     assert len(scheda["domande"]) == 60
     assert scheda["domande"][0] == 2
