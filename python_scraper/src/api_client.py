@@ -1,8 +1,12 @@
 import requests
+import logging
 from typing import List
 from .models import Dipartimento, CorsoDiStudi, Insegnamento, SchedaOpis
 from src.transformers import parse_course_name, parse_insegnamento_data, parse_scheda_opis_data
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://public.smartedu.unict.it/EnqaDataViewer"
 HEADERS = {
@@ -10,8 +14,21 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
+TIMEOUT = 120
+
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=2,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["POST"]
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+
+
 session = requests.Session()
 session.headers.update(HEADERS)
+session.mount("https://", adapter)
+session.mount("http://", adapter)
 
 
 def get_departments(year: int) -> List[Dipartimento]:
@@ -24,7 +41,7 @@ def get_departments(year: int) -> List[Dipartimento]:
 
     try:
         response = session.post(
-            url, json=payload, timeout=30)
+            url, json=payload, timeout=TIMEOUT)
         response.raise_for_status()
 
         data = response.json()
@@ -48,7 +65,8 @@ def get_departments(year: int) -> List[Dipartimento]:
         return departments
 
     except requests.exceptions.RequestException as e:
-        print(f"Errore durante la richiesta API per l'anno {year}: {e}")
+        logger.error(
+            f"Errore durante la richiesta API dipartimenti per l'anno {year}: {e}")
         return []
 
 
@@ -64,7 +82,7 @@ def get_courses(year: int, department_code: int) -> List[CorsoDiStudi]:
 
     try:
         response = session.post(
-            url, json=payload, timeout=30)
+            url, json=payload, timeout=TIMEOUT)
         response.raise_for_status()
 
         data = response.json()
@@ -93,7 +111,8 @@ def get_courses(year: int, department_code: int) -> List[CorsoDiStudi]:
         return corsi
 
     except requests.exceptions.RequestException as e:
-        print(f"Errore API Corsi (Dip: {department_code}, Anno: {year}): {e}")
+        logger.error(
+            f"Errore API Corsi (Dip: {department_code}, Anno: {year}): {e}")
         return []
 
 
@@ -110,7 +129,7 @@ def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnam
 
     try:
         response = session.post(
-            url, json=payload, timeout=30)
+            url, json=payload, timeout=TIMEOUT)
         response.raise_for_status()
 
         data = response.json()
@@ -140,15 +159,15 @@ def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnam
 
         return insegnamenti
     except requests.exceptions.RequestException as e:
-        print(
+        logger.error(
             f"Errore API Insegnamenti (Corso: {course_code}, Dip: {dept_code}, Anno: {year}): {e}")
         return []
 
 
-def get_questions(year: int, dept_code: int, course_code: str, activity_code: int, professor_tax: str) ->List[SchedaOpis]:
-    
+def get_questions(year: int, dept_code: int, course_code: str, activity_code: int, professor_tax: str) -> List[SchedaOpis]:
+
     url = f"{BASE_URL}/getQuestions"
-    
+
     payload = {
         "surveys": "",
         "academicYear": year,
@@ -158,24 +177,24 @@ def get_questions(year: int, dept_code: int, course_code: str, activity_code: in
         "partCode": "null",
         "professor": professor_tax
     }
-    
+
     try:
-        response = session.post(url, json=payload, timeout=45)
+        response = session.post(url, json=payload, timeout=TIMEOUT)
         response.raise_for_status()
         data = response.json()
     except requests.exceptions.RequestException as e:
-        print(f"Errore API Schede Opis (Activity: {activity_code}, Corso: {course_code}, Dip: {dept_code}, Anno: {year}): {e}")
+        logger.error(
+            f"Errore API Schede Opis (Activity: {activity_code}, Corso: {course_code}, Dip: {dept_code}, Anno: {year}): {e}")
         return []
 
     schede_opis_data = parse_scheda_opis_data(data)
-    
+
     results = []
     formatted_year = f"{year}/{year + 1}"
-    
+
     for item in schede_opis_data:
         item["anno_accademico"] = formatted_year
         item["id_insegnamento"] = activity_code
         results.append(SchedaOpis(**item))
-    
+
     return results
-    
