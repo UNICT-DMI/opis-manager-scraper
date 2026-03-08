@@ -1,5 +1,6 @@
 import logging
 import time
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.api_client import get_departments, get_courses, get_activities, get_questions
 from src.database import connect_to_db, close_connection, insert_department, insert_course, insert_insegnamento, insert_schede_opis
@@ -10,6 +11,7 @@ ACCADEMIC_YEARS = [2021, 2022, 2023, 2024]
 DELAY = 1.0
 
 MAX_WORKERS = 3
+DEBUG_MODE = True
 
 
 def process_activity(year: int, dept_code: str, course_code: str, activity):
@@ -50,6 +52,10 @@ def process_course(year: int, dept_code: str, course, dip_internal_id: int):
             f"      [SKIP CORSO] Nessuna materia trovata per {course.unict_id} nell'anno {year}.")
         return
 
+    if DEBUG_MODE and activities:
+        campione = min(5, len(activities))
+        activities = random.sample(activities, campione)
+
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = [
             executor.submit(process_activity, year, dept_code,
@@ -87,6 +93,9 @@ def process_department(year: int, department):
     courses = get_courses(year, department.unict_id)
     time.sleep(DELAY)
 
+    if DEBUG_MODE and courses:
+        courses = [random.choice(courses)]
+
     for course in courses:
         process_course(year, department.unict_id, course, dip_internal_id)
 
@@ -102,9 +111,15 @@ def run_scraper():
             logger.info(
                 f" INIZIO ELABORAZIONE ANNO ACCADEMICO {year}/{year+1}")
             logger.info(f"==========================================")
+            logger.info(
+                f"Chiamata API in corso per scaricare i dipartimenti del {year}...")
 
             departments = get_departments(year)
             time.sleep(DELAY)
+
+            if DEBUG_MODE and departments:
+                departments = [random.choice(departments)]
+
             logger.info(
                 f"Trovati {len(departments)} dipartimenti per l'anno {year}.")
 
