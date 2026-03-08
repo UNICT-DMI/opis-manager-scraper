@@ -6,9 +6,37 @@ from src.transformers import parse_course_name, parse_insegnamento_data, parse_s
 @pytest.mark.parametrize(
     "input_str, expected_nome, expected_classe",
     [
+        # --- CASI CLASSICI ---
         ("Informatica L-31", "Informatica", "L-31"),
         ("Matematica LM-40", "Matematica", "LM-40"),
         ("Informatica   L-31", "Informatica", "L-31"),
+
+        # --- CASI CON TRATTINI O SPAZI EXTRA ---
+        ("Fisica L-30 ", "Fisica", "L-30"),
+        ("Informatica - L-31", "Informatica", "L-31"),
+
+        # --- CASI CON PARENTESI ---
+        ("Informatica (L-31)", "Informatica", "L-31"),
+        ("Scienze Agrarie (LM-69)", "Scienze Agrarie", "LM-69"),
+
+        # --- CASI CON R (RIFORMATO) ---
+        ("Viticoltura, Enologia ed Enomarketing L-26 R",
+         "Viticoltura, Enologia ed Enomarketing", "L-26 R"),
+        ("Biotecnologie Agrarie (LM-7 R)", "Biotecnologie Agrarie", "LM-7 R"),
+
+        # --- CASI CON PROFESSIONI SANITARIE (L/SNT) ---
+        ("Ostetricia (abilitante alla professione sanitaria di Ostetrica/o) L/SNT1",
+         "Ostetricia (abilitante alla professione sanitaria di Ostetrica/o)", "L/SNT1"),
+        ("Infermieristica (L/SNT1)", "Infermieristica", "L/SNT1"),
+
+        # --- CASI CON MAGISTRALE A CICLO UNICO (LMCU) ---
+        ("Medicina e Chirurgia LMCU-41", "Medicina e Chirurgia", "LMCU-41"),
+
+        # --- CASI MINUSCOLI (re.IGNORECASE) ---
+        ("scienze motorie l/snt2", "scienze motorie", "L/SNT2"),
+        ("biologia l-13 r", "biologia", "L-13 R"),
+
+        # --- CASI SENZA CLASSE O VUOTI ---
         ("Storia Romana", "Storia Romana", ""),
         ("", "", ""),
         (None, "", ""),
@@ -24,8 +52,6 @@ def test_parse_course_name(
     nome, classe = parse_course_name(input_str)
 
     # assert
-    assert nome == expected_nome
-    assert classe == expected_classe
     assert nome == expected_nome
     assert classe == expected_classe
 

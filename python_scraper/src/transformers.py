@@ -9,13 +9,24 @@ def parse_course_name(full_name: str) -> Tuple[str, str]:
 
     full_name = full_name.strip()
 
-    pattern = r"\s+\(?(L(?:M|MCU)?-[0-9]+(?:\s*R)?)\)?\s*$"
+    # Regex potenziata:
+    # \s+                  -> Spazio iniziale
+    # \(?                  -> Parentesi opzionale
+    # (                    -> INIZIO GRUPPO 1
+    #   L(?:M|MCU)?        -> Base: L, LM, o LMCU
+    #   (?:-|\/)           -> Separatore: accetta sia il trattino "-" che la slash "/"
+    #   (?:[0-9]+|SNT[0-9]+) -> Valore: accetta numeri puri (es. 31) o sigla SNT + numeri (es. SNT1)
+    #   (?:\s*R)?          -> Riformato opzionale (con o senza spazi prima)
+    # )                    -> FINE GRUPPO 1
+    # \)?                  -> Parentesi chiusa opzionale
+    # \s*$                 -> Spazi finali opzionali e fine stringa
+    pattern = r"\s+\(?(L(?:M|MCU)?(?:-|\/)(?:[0-9]+|SNT[0-9]+)(?:\s*R)?)\)?\s*$"
 
-    match = re.search(pattern, full_name)
+    match = re.search(pattern, full_name, re.IGNORECASE)
 
     if match:
 
-        classe = match.group(1)
+        classe = match.group(1).upper()
         nome = full_name[:match.start()].strip()
 
         if nome.endswith('-'):
