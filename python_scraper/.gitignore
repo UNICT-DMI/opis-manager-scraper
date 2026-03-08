@@ -34,3 +34,5 @@ ENV/
 .coverage
 .pytest_cache/
 calc_cov/
+
+.env
