@@ -36,6 +36,7 @@ class Insegnamento:
     id_modulo: int = 0
 
     ssd: Optional[str] = None
+    nome_modulo: Optional[str] = None
 
 
 @dataclass
