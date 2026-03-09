@@ -11,16 +11,17 @@ def parse_course_name(full_name: str) -> Tuple[str, str]:
 
     # Regex potenziata:
     # \s+                  -> Spazio iniziale
-    # \(?                  -> Parentesi opzionale
-    # (                    -> INIZIO GRUPPO 1
+    # \(?                  -> Parentesi aperta opzionale
+    # (                    -> INIZIO GRUPPO 1 (quello che estraiamo come classe)
     #   L(?:M|MCU)?        -> Base: L, LM, o LMCU
     #   (?:-|\/)           -> Separatore: accetta sia il trattino "-" che la slash "/"
-    #   (?:[0-9]+|SNT[0-9]+) -> Valore: accetta numeri puri (es. 31) o sigla SNT + numeri (es. SNT1)
-    #   (?:\s*R)?          -> Riformato opzionale (con o senza spazi prima)
+    #   (?:[0-9]+|SNT[0-9]+) -> Valore: accetta numeri puri (es. 4, 31) o sigla SNT + numeri (es. SNT1)
+    #   (?:\s*c\.?u\.?)?   -> Ciclo Unico opzionale: accetta "cu" o "c.u." (con o senza spazi e punti)
+    #   (?:\s*R)?          -> Riformato opzionale: la lettera "R" (con o senza spazi prima)
     # )                    -> FINE GRUPPO 1
     # \)?                  -> Parentesi chiusa opzionale
     # \s*$                 -> Spazi finali opzionali e fine stringa
-    pattern = r"\s+\(?(L(?:M|MCU)?(?:-|\/)(?:[0-9]+|SNT[0-9]+)(?:\s*R)?)\)?\s*$"
+    pattern = r"\s+\(?(L(?:M|MCU)?(?:-|\/)(?:[0-9]+|SNT[0-9]+)(?:\s*c\.?u\.?)?(?:\s*R)?)\)?\s*$"
 
     match = re.search(pattern, full_name, re.IGNORECASE)
 

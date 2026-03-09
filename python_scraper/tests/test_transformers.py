@@ -40,6 +40,9 @@ from src.transformers import parse_course_name, parse_insegnamento_data, parse_s
         ("Storia Romana", "Storia Romana", ""),
         ("", "", ""),
         (None, "", ""),
+        # --- CASI CON C.U. (Ciclo Unico esplicito) ---
+        ("Architettura LM-4 c.u. R", "Architettura", "LM-4 C.U. R"),
+        ("Farmacia (LM-41 cu)", "Farmacia", "LM-41 CU"),
     ],
 )
 def test_parse_course_name(
