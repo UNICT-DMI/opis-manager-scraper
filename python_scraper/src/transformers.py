@@ -68,101 +68,28 @@ def parse_insegnamento_data(item: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-"""
-def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
-
-    clusters = json_data.get("clusterData", [])
-    graphs = json_data.get("graphPieList", [])
-    result_list = []
-
-    for cluster in clusters:
-        cluster_info = cluster.get("cluster", {})
-        cluster_name = cluster_info.get("Text", "Sconosciuto")
-
-        domande_flat = [0] * 60
-        questions = cluster.get("questions", [])
-
-        totale_schede = 0
-
-        for q in questions:
-
-            q_code_str = q.get("questionCode")
-
-            if not q_code_str:
-                continue
-
-            try:
-                q_idx = int(q_code_str) - 1
-            except ValueError:
-                continue
-
-            if q_idx < 0 or q_idx >= 12:
-                continue
-
-            subs = q.get("submissions", 0)
-            if subs > totale_schede:
-                totale_schede = subs
-
-            base_offset = q_idx * 5
-            for ans in q.get("answers", []):
-                a_code = ans.get("answerCode")
-                count = ans.get("count", 0)
-
-                offset = -1
-
-                match a_code:
-                    case "R1": offset = 0
-                    case "R2": offset = 1
-                    case "R3": offset = 2
-                    case "R4": offset = 3
-                    case "R5": offset = 4
-                    case _: offset = -1
-
-                if offset >= 0:
-                    domande_flat[base_offset + offset] = count
-
-        eta_data = {}
-        for graph in graphs:
-            if graph.get("name") == cluster_name:
-                for pie in graph.get("dataPie", []):
-                    datasets = pie.get("datasets", [])
-                    if datasets and "Età" in datasets[0].get("label", ""):
-                        labels = pie.get("labels", [])
-                        values = datasets[0].get("data", [])
-
-                        for i, label in enumerate(labels):
-                            if i < len(values):
-                                eta_data[label] = int(values[i])
-
-        result_list.append({
-            "totale_schede": totale_schede,
-            "domande": domande_flat,
-            "eta": eta_data if eta_data else None
-        })
-
-    return result_list
-"""
+def _aggiorna_statistica_json(record: Dict[str, Any], campo: str, labels: List[str], values: List[Any]) -> None:
+    if record[campo] is None:
+        record[campo] = {}
+    for i, lbl in enumerate(labels):
+        if i < len(values):
+            record[campo][lbl] = record[campo].get(lbl, 0) + int(values[i])
 
 
 def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     clusters = json_data.get("clusterData", [])
     graphs = json_data.get("graphPieList", [])
 
-    # 1. Creiamo un UNICO record di base per questa materia.
-    # Inizializziamo i campi Not Null con valori vuoti validi (0 o liste vuote)
-    # per non far arrabbiare MySQL.
     record = {
         "totale_schede": 0,
         "totale_schede_nf": 0,
-        "fc": 0,          # Fuori corso (Not Null)
-        "inatt_nf": 0,    # Inattivi (Not Null)
+        "fc": 0,
+        "inatt_nf": 0,
         "domande": [0] * 60,
         "domande_nf": [0] * 60,
-        "motivo_nf": [],  # JSON Not Null
-        "sugg": [],       # JSON Not Null
-        "sugg_nf": [],    # JSON Not Null
-
-        # Campi nullable (possono restare None se non li troviamo)
+        "motivo_nf": [],
+        "sugg": [],
+        "sugg_nf": [],
         "femmine": None,
         "femmine_nf": None,
         "inatt": None,
@@ -174,12 +101,9 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         "studio_tot": None
     }
 
-    # 2. Estraiamo i dati dalle domande e li smistiamo
     for cluster in clusters:
         cluster_info = cluster.get("cluster", {})
         cluster_name = cluster_info.get("Text", "").lower()
-
-        # Capiamo se stiamo guardando il cluster dei Non Frequentanti
         is_nf = "non frequentanti" in cluster_name
 
         domande_flat = [0] * 60
@@ -215,12 +139,10 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     case "R3": offset = 2
                     case "R4": offset = 3
                     case "R5": offset = 4
-                    case _: offset = -1
 
                 if offset >= 0:
                     domande_flat[base_offset + offset] = count
 
-        # Salviamo i dati nel posto giusto del nostro record unico
         if is_nf:
             record["totale_schede_nf"] = totale_schede
             record["domande_nf"] = domande_flat
@@ -228,23 +150,63 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
             record["totale_schede"] = totale_schede
             record["domande"] = domande_flat
 
-    # 3. Estraiamo l'età dai grafici (Aggregando Frequentanti e Non Frequentanti)
-    eta_data = {}
     for graph in graphs:
+        is_nf_graph = "non frequentanti" in graph.get("name", "").lower()
+
         for pie in graph.get("dataPie", []):
             datasets = pie.get("datasets", [])
-            if datasets and "Età" in datasets[0].get("label", ""):
-                labels = pie.get("labels", [])
-                values = datasets[0].get("data", [])
+            if not datasets:
+                continue
 
-                for i, label in enumerate(labels):
-                    if i < len(values):
-                        # Sommiamo l'età se c'è sia nei frequentanti che nei non frequentanti
-                        eta_data[label] = eta_data.get(
-                            label, 0) + int(values[i])
+            graph_label = datasets[0].get("label", "").lower()
+            labels = pie.get("labels", [])
+            values = datasets[0].get("data", [])
 
-    if eta_data:
-        record["eta"] = eta_data
+            match graph_label:
+                case lbl if any(k in lbl for k in ["età", "eta'", "age"]):
+                    _aggiorna_statistica_json(record, "eta", labels, values)
 
-    # Restituiamo una lista contenente il nostro unico e perfetto record
+                case lbl if "numero medio di studenti" in lbl:
+                    _aggiorna_statistica_json(
+                        record, "num_studenti", labels, values)
+
+                case lbl if any(k in lbl for k in ["studio autonomo", "giornalmente"]):
+                    _aggiorna_statistica_json(
+                        record, "studio_gg", labels, values)
+
+                case lbl if "ore di studio, in totale" in lbl:
+                    _aggiorna_statistica_json(
+                        record, "studio_tot", labels, values)
+
+                case lbl if any(k in lbl for k in ["domicilio", "tempo impiega"]):
+                    _aggiorna_statistica_json(
+                        record, "ragg_uni", labels, values)
+
+                case lbl if any(k in lbl for k in ["sesso", "genere", "gender"]):
+                    femmine_count = 0
+                    for i, lbl_sesso in enumerate(labels):
+                        if lbl_sesso.lower() in ["f", "femmina", "femmine"] and i < len(values):
+                            femmine_count += int(values[i])
+
+                    if is_nf_graph:
+                        record["femmine_nf"] = (record.get(
+                            "femmine_nf") or 0) + femmine_count
+                    else:
+                        record["femmine"] = (record.get(
+                            "femmine") or 0) + femmine_count
+
+                case lbl if any(k in lbl for k in ["fuori corso", "iscrizione"]):
+                    fc_count = 0
+                    for i, lbl_fc in enumerate(labels):
+                        if "fuori corso" in lbl_fc.lower() and i < len(values):
+                            fc_count += int(values[i])
+                    record["fc"] += fc_count
+
+                case _:
+                    pass
+
+    for campo in ["eta", "num_studenti", "studio_gg", "studio_tot", "ragg_uni"]:
+        if record[campo] == {}:
+            record[campo] = None
+
     return [record]
