@@ -42,7 +42,7 @@ def test_get_departments(
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getDepartments"
-    mock_post = mocker.patch("src.api_client.requests.post")
+    mock_post = mocker.patch("src.api_client.session.post")
     mock_post.return_value.status_code = 200
     mock_post.return_value.json.return_value = {"data": mock_response_data}
 
@@ -70,7 +70,7 @@ def test_get_departments_api_failure(
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getDepartments"
-    mock_post = mocker.patch("src.api_client.requests.post")
+    mock_post = mocker.patch("src.api_client.session.post")
     mock_post.side_effect = requests.exceptions.ConnectionError(
         "API non raggiungibile")
 
@@ -139,7 +139,7 @@ def test_get_courses(
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getCourses"
 
-    mock_post = mocker.patch("src.api_client.requests.post")
+    mock_post = mocker.patch("src.api_client.session.post")
     mock_post.return_value.status_code = 200
     mock_post.return_value.json.return_value = {"data": mock_response_data}
 
@@ -173,7 +173,7 @@ def test_get_courses_api_failure(
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getCourses"
-    mock_post = mocker.patch("src.api_client.requests.post")
+    mock_post = mocker.patch("src.api_client.session.post")
     mock_post.side_effect = requests.exceptions.ConnectionError(
         "API non raggiungibile")
 
@@ -239,7 +239,7 @@ def test_get_activities(
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getActivities"
 
-    mock_post = mocker.patch("src.api_client.requests.post")
+    mock_post = mocker.patch("src.api_client.session.post")
     mock_post.return_value.status_code = 200
     mock_post.return_value.json.return_value = {"data": mock_response_data}
 
@@ -273,7 +273,7 @@ def test_get_activities_api_failure(
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getActivities"
-    mock_post = mocker.patch("src.api_client.requests.post")
+    mock_post = mocker.patch("src.api_client.session.post")
     mock_post.side_effect = requests.exceptions.ConnectionError(
         "API non raggiungibile")
 
@@ -303,7 +303,7 @@ def test_get_activities_api_failure(
                 "clusterData": [{
                     "cluster": {"Text": "Test Cluster"},
                     "questions": [
-                        {"questionCode": "1", "submissions": 10, "answers": []} 
+                        {"questionCode": "1", "submissions": 10, "answers": []}
                     ]
                 }],
                 "graphPieList": []
@@ -314,17 +314,22 @@ def test_get_activities_api_failure(
                 "departmentCode": "190141",
                 "courseCode": "W82",
                 "activityCode": "1014456",
-                "partCode": "null", 
+                "partCode": "null",
                 "professor": "PROFCF123"
             },
             [
                 SchedaOpis(
-                    id_insegnamento=1014456,
                     anno_accademico="2023/2024",
-                    tipo_scheda="Test Cluster",
+                    id_insegnamento=1014456,
                     totale_schede=10,
+                    totale_schede_nf=0,
+                    fc=0,
+                    inatt_nf=0,
                     domande=[0] * 60,
-                    eta=None
+                    domande_nf=[0] * 60,
+                    motivo_nf=[],
+                    sugg=[],
+                    sugg_nf=[]
                 )
             ]
         ),
@@ -338,10 +343,23 @@ def test_get_activities_api_failure(
                 "departmentCode": "190141",
                 "courseCode": "W82",
                 "activityCode": "9999999",
-                "partCode": "null", 
+                "partCode": "null",
                 "professor": ""
             },
-            [] 
+            [
+                SchedaOpis(
+                    anno_accademico="2023/2024",
+                    id_insegnamento=9999999,
+                    totale_schede=0,  # Nessuna scheda
+                    totale_schede_nf=0,
+                    fc=0,
+                    inatt_nf=0,
+                    domande=[0] * 60,
+                    domande_nf=[0] * 60,
+                    motivo_nf=[],
+                    sugg=[],
+                    sugg_nf=[]
+                )]
         )
     ]
 )
@@ -358,12 +376,13 @@ def test_get_questions(
 ) -> None:
     # arange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getQuestions"
-    mock_post = mocker.patch("src.api_client.requests.post")
+    mock_post = mocker.patch("src.api_client.session.post")
     mock_post.return_value.status_code = 200
     mock_post.return_value.json.return_value = mock_response
 
     # act
-    result = get_questions(year, dept_code, course_code, activity_code, prof_tax)
+    result = get_questions(year, dept_code, course_code,
+                           activity_code, prof_tax)
 
     # assert
     mock_post.assert_called_once()
@@ -371,7 +390,8 @@ def test_get_questions(
     assert args[0] == expected_url
     assert kwargs["json"] == expected_payload
     assert result == expected_result
-    
+
+
 @pytest.mark.parametrize(
     "year, dept_code, course_code, activity_code, prof_tax",
     [
@@ -389,21 +409,23 @@ def test_get_questions_failure(
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getQuestions"
-    mock_post = mocker.patch("src.api_client.requests.post")
-    
+    mock_post = mocker.patch("src.api_client.session.post")
+
     import requests
-    mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
+    mock_post.side_effect = requests.exceptions.ConnectionError(
+        "API non raggiungibile")
 
     # act
-    result = get_questions(year, dept_code, course_code, activity_code, prof_tax)
+    result = get_questions(year, dept_code, course_code,
+                           activity_code, prof_tax)
 
     # assert
     assert result == []
     mock_post.assert_called_once()
-    
+
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
-    
+
     actual_payload = kwargs["json"]
     assert actual_payload["academicYear"] == year
     assert actual_payload["departmentCode"] == str(dept_code)
