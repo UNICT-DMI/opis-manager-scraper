@@ -130,12 +130,33 @@ def test_parse_course_name(
                 "ssd": "MAT/02",
                 "professor_tax": ""
             }
+        ),
+        (
+            {
+                "activityCode": "A3688",
+                "activityName": "MATERIA DA SALTARE",
+            },
+            None
+        ),
+        (
+            {
+                "activityCode": None,
+                "activityName": "TOTALE",
+            },
+            None
+        ),
+        (
+            {
+                "activityCode": "",
+                "activityName": "VUOTA",
+            },
+            None
         )
     ]
 )
 def test_parse_insegnamento_data(
     input_data: dict,
-    expected_dict: dict
+    expected_dict: Optional[dict]
 ) -> None:
 
     # act

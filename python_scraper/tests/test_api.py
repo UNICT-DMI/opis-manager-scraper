@@ -199,16 +199,23 @@ def test_get_courses_api_failure(
             2023, 190141, "W82",
             {"surveys": "", "academicYear": 2023,
                 "departmentCode": "190141", "courseCode": "W82"},
-            [{
-                "activityCode": "1001829",
-                "activityName": "ULTERIORI ATTIVITA'",
-                "professorName": "FRANCESCO",
-                "professorLastName": "GUARNERA",
-                "professorTaxCode": "",
-                "channel": None,
-                "partCode": None,
-                "SSDsigla": "INF/01"
-            },
+            [
+                {
+                    "activityCode": "1001829",
+                    "activityName": "ULTERIORI ATTIVITA'",
+                    "professorName": "FRANCESCO",
+                    "professorLastName": "GUARNERA",
+                    "professorTaxCode": "",
+                    "channel": None,
+                    "partCode": None,
+                    "SSDsigla": "INF/01"
+                },
+                {
+                    "activityCode": "A3688",
+                    "activityName": "MATERIA SPORCA",
+                    "professorName": "MARIO",
+                    "professorLastName": "ROSSI"
+                },
                 {"activityCode": None, "activityName": "TOTALE"}],
             [Insegnamento(
                 codice_gomp=1001829,
