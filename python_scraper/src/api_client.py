@@ -139,10 +139,15 @@ def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnam
         formatted_year = f"{year}/{year + 1}"
 
         for item in items:
-            if item.get("activityCode") is None:
-                continue
 
             insegnamento_data = parse_insegnamento_data(item)
+
+            if not insegnamento_data:
+                logger.warning(
+                    f"      [SKIP MATERIA] '{item.get('activityName')}' ignorata. "
+                    f"Codice GOMP vuoto o alfanumerico: {item.get('activityCode')}"
+                )
+                continue
 
             insegnamento = Insegnamento(
                 codice_gomp=insegnamento_data["codice_gomp"],

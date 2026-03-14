@@ -1,5 +1,5 @@
 import re
-from typing import Tuple, Dict, Any, List
+from typing import Tuple, Dict, Any, List, Optional
 
 
 def parse_course_name(full_name: str) -> Tuple[str, str]:
@@ -38,7 +38,16 @@ def parse_course_name(full_name: str) -> Tuple[str, str]:
     return full_name, ""
 
 
-def parse_insegnamento_data(item: Dict[str, Any]) -> Dict[str, Any]:
+def parse_insegnamento_data(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    raw_code = item.get("activityCode")
+    if not raw_code:
+        return None
+
+    try:
+        codice_gomp = int(raw_code)
+    except ValueError:
+        return None
+
     cognome = item.get("professorLastName") or ""
     nome = item.get("professorName") or ""
     docente_full = f"{cognome} {nome}".strip()
@@ -57,7 +66,7 @@ def parse_insegnamento_data(item: Dict[str, Any]) -> Dict[str, Any]:
             id_modulo = 0
 
     return {
-        "codice_gomp": int(item["activityCode"]) if item.get("activityCode") else 0,
+        "codice_gomp": codice_gomp,
         "nome": item.get("activityName", ""),
         "docente": docente_full,
         "canale": canale,
