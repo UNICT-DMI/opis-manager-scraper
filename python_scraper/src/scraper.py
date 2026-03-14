@@ -4,14 +4,17 @@ import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.api_client import get_departments, get_courses, get_activities, get_questions
 from src.database import connect_to_db, close_connection, insert_department, insert_course, insert_insegnamento, insert_schede_opis
+from dotenv import load_dotenv
+import os
 
 logger = logging.getLogger(__name__)
+load_dotenv()
 
 ACCADEMIC_YEARS = [2021, 2022, 2023, 2024]
 DELAY = 1.0
 
 MAX_WORKERS = 3
-DEBUG_MODE = True
+DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() in ("true", "1", "t")
 
 
 def process_activity(year: int, dept_code: str, course_code: str, activity):
