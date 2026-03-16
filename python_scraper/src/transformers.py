@@ -2,7 +2,7 @@ import re
 from typing import Tuple, Dict, Any, List, Optional
 
 
-def parse_course_name(full_name: str) -> Tuple[str, str]:
+def parse_course_name(full_name: Optional[str]) -> Tuple[str, str]:
 
     if not full_name:
         return "", ""
@@ -113,7 +113,7 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     for cluster in clusters:
         cluster_info = cluster.get("cluster", {})
         cluster_name = cluster_info.get("Text", "").lower()
-        is_nf = "non frequentanti" in cluster_name
+        is_nf = "Non Frequentanti" in cluster_name
 
         domande_flat = [0] * 60
         totale_schede = 0

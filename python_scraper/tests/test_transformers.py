@@ -183,13 +183,15 @@ def mock_opis_json() -> dict[str, Any]:
                     },
                     {
                         "questionCode": "2",
-                        "submissions": 12,  # Aumentato per simulare totale schede = 12
+                        "submissions": 12,
                         "answers": [
                             {"answerCode": "R3", "count": 5},
-                            # Cambiato R6 (non gestito) in R5
                             {"answerCode": "R5", "count": 7}
                         ]
-                    }
+                    },
+                    {"questionCode": None, "submissions": 1, "answers": []},
+                    {"questionCode": "ABC", "submissions": 1, "answers": []},
+                    {"questionCode": "15", "submissions": 1, "answers": []},
                 ]
             }
         ],
@@ -212,7 +214,22 @@ def mock_opis_json() -> dict[str, Any]:
                     {
                         "datasets": [{"label": "Anno di iscrizione", "data": [20.0, 4.0]}],
                         "labels": ["In corso", "Fuori corso"]
-                    }
+                    },
+                    {
+                        "datasets": [{"label": "Quante ore di studio, in totale, pensi siano necessarie", "data": [10.0]}],
+                        "labels": ["Da 51 a 100"]
+                    },
+                    {
+                        "datasets": [{"label": "Quanto tempo impiega per arrivare dal domicilio", "data": [20.0]}],
+                        "labels": ["Da 1 a 30 minuti"]
+                    },
+                    {
+                        "datasets": [{"label": "Studio autonomo giornalmente", "data": [8.0]}],
+                        "labels": ["2 ore"]
+                    },
+                    {"datasets": []},
+                    {"datasets": [{"label": "Grafico Sconosciuto",
+                                   "data": [1.0]}], "labels": ["X"]}
                 ]
             },
             {
@@ -235,23 +252,21 @@ def test_parse_scheda_opis_data(mock_opis_json: dict[str, Any]) -> None:
     # assert
     assert len(results) == 1
     scheda = results[0]
-
-    # Controllo Base (Questions)
     assert scheda["totale_schede"] == 12
     assert len(scheda["domande"]) == 60
-    assert scheda["domande"][0] == 2  # Domanda 1, R1
-    assert scheda["domande"][3] == 8  # Domanda 1, R4
-    assert scheda["domande"][7] == 5  # Domanda 2, R3
-    assert scheda["domande"][9] == 7  # Domanda 2, R5
-
-    # Controllo Grafici Aggregati (Match-Case)
+    assert scheda["domande"][0] == 2
+    assert scheda["domande"][3] == 8
+    assert scheda["domande"][7] == 5
+    assert scheda["domande"][9] == 7
     assert scheda["eta"] is not None
     assert isinstance(scheda["eta"], dict)
     assert scheda["eta"]["20-21"] == 5
     assert scheda["eta"]["22-23"] == 3
-    assert scheda["eta"]["99"] == 100  # Aggregato dai non frequentanti!
-
+    assert scheda["eta"]["99"] == 100
     assert scheda["femmine"] == 15
     assert scheda["num_studenti"] is not None
     assert scheda["num_studenti"]["Fino a 25"] == 6
-    assert scheda["fc"] == 4  # Trovati 4 fuori corso
+    assert scheda["fc"] == 4
+    assert scheda["studio_tot"]["Da 51 a 100"] == 10
+    assert scheda["ragg_uni"]["Da 1 a 30 minuti"] == 20
+    assert scheda["studio_gg"]["2 ore"] == 8
