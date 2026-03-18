@@ -17,7 +17,7 @@ MAX_WORKERS = 3
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() in ("true", "1", "t")
 
 
-def process_activity(year: int, dept_code: str, course_code: str, activity):
+def process_activity(year: int, dept_code: int, course_code: str, activity):
     if not activity.professor_tax:
         logger.warning(
             f"      [SKIP] {activity.nome}: codice docente mancante.")
@@ -38,7 +38,7 @@ def process_activity(year: int, dept_code: str, course_code: str, activity):
     return activity, schede_opis
 
 
-def process_course(year: int, dept_code: str, course, dip_internal_id: int):
+def process_course(year: int, dept_code: int, course, dip_internal_id: int):
     corso_internal_id = insert_course(course, dip_internal_id)
     if corso_internal_id == -1:
         logger.error(
