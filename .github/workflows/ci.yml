@@ -1,0 +1,35 @@
+name: Python Test CI
+
+on:
+  push:
+    branches: [ "main", "master","py_scraper" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./python_scraper
+
+    steps:
+    - name: Checkout del codice
+      uses: actions/checkout@v4
+
+    - name: Setup Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+
+    - name: Installazione dipendenze
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+  
+    - name: Esecuzione Pytest con Coverage
+      run: |
+        pytest -v
