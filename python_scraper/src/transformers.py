@@ -113,7 +113,7 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     for cluster in clusters:
         cluster_info = cluster.get("cluster", {})
         cluster_name = cluster_info.get("Text", "").lower()
-        is_nf = "Non Frequentanti" in cluster_name
+        is_nf = "non frequentanti" in cluster_name
 
         domande_flat = [0] * 60
         totale_schede = 0
