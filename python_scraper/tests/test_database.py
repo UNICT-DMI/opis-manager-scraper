@@ -162,3 +162,43 @@ def test_insert_schede_opis_failure(mock_db_connection, caplog):
     database.insert_schede_opis([scheda], insegnamento_internal_id=100)
 
     assert "Errore DB durante il salvataggio" in caplog.text
+
+
+def test_connect_to_db_failure(mocker, caplog):
+    mock_connect = mocker.patch("src.database.mysql.connector.connect")
+    mock_connect.side_effect = mysql.connector.Error("Credenziali errate")
+
+    with pytest.raises(mysql.connector.Error):
+        database.connect_to_db()
+
+    assert "Errore di connessione a MySQL" in caplog.text
+
+
+def test_close_connection():
+    mock_conn = MagicMock()
+    mock_conn.is_connected.return_value = True
+    database._connection = mock_conn
+
+    database.close_connection()
+
+    mock_conn.close.assert_called_once()
+
+
+def test_inserts_without_connection(caplog):
+    database._connection = None
+    dip = Dipartimento(unict_id=1, nome="Dipartimento",
+                       anno_accademico="23/24")
+    corso = CorsoDiStudi(unict_id="C1", nome="Corso",
+                         classe="L", anno_accademico="23/24", dipartimento_id=1)
+    ins = Insegnamento(codice_gomp=1, id_cds="C1", anno_accademico="23/24",
+                       nome="Materia", docente="Doc", professor_tax="")
+    scheda = SchedaOpis(
+        anno_accademico="23/24", id_insegnamento=1010, totale_schede=5, totale_schede_nf=0, fc=0, inatt_nf=0,
+        domande=[1, 2], domande_nf=[], motivo_nf=[], sugg=[], sugg_nf=[]
+    )
+
+    assert database.insert_department(dip) == -1
+    assert "Database non connesso" in caplog.text
+    assert database.insert_course(corso, 1) == -1
+    assert database.insert_insegnamento(ins, 1) == -1
+    assert database.insert_schede_opis([scheda], 1) is None
