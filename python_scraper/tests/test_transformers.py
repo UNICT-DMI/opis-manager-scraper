@@ -193,6 +193,13 @@ def mock_opis_json() -> dict[str, Any]:
                     {"questionCode": "ABC", "submissions": 1, "answers": []},
                     {"questionCode": "15", "submissions": 1, "answers": []},
                 ]
+            },
+            {
+                "cluster": {"Text": "Studenti Non Frequentanti"},
+                "questions": [
+                    {"questionCode": "1", "submissions": 5,
+                        "answers": [{"answerCode": "R5", "count": 5}]}
+                ]
             }
         ],
         "graphPieList": [
@@ -216,10 +223,6 @@ def mock_opis_json() -> dict[str, Any]:
                         "labels": ["In corso", "Fuori corso"]
                     },
                     {
-                        "datasets": [{"label": "Quante ore di studio, in totale, pensi siano necessarie", "data": [10.0]}],
-                        "labels": ["Da 51 a 100"]
-                    },
-                    {
                         "datasets": [{"label": "Quanto tempo impiega per arrivare dal domicilio", "data": [20.0]}],
                         "labels": ["Da 1 a 30 minuti"]
                     },
@@ -229,7 +232,9 @@ def mock_opis_json() -> dict[str, Any]:
                     },
                     {"datasets": []},
                     {"datasets": [{"label": "Grafico Sconosciuto",
-                                   "data": [1.0]}], "labels": ["X"]}
+                                   "data": [1.0]}], "labels": ["X"]},
+                    {"datasets": [
+                        {"label": "Quante ore di studio, in totale", "data": []}], "labels": []}
                 ]
             },
             {
@@ -238,7 +243,9 @@ def mock_opis_json() -> dict[str, Any]:
                     {
                         "datasets": [{"label": "Età", "data": [100.0]}],
                         "labels": ["99"]
-                    }
+                    },
+                    {
+                        "datasets": [{"label": "Genere", "data": [5.0]}], "labels": ["F"]}
                 ]
             }
         ]
@@ -267,6 +274,7 @@ def test_parse_scheda_opis_data(mock_opis_json: dict[str, Any]) -> None:
     assert scheda["num_studenti"] is not None
     assert scheda["num_studenti"]["Fino a 25"] == 6
     assert scheda["fc"] == 4
-    assert scheda["studio_tot"]["Da 51 a 100"] == 10
     assert scheda["ragg_uni"]["Da 1 a 30 minuti"] == 20
     assert scheda["studio_gg"]["2 ore"] == 8
+    assert scheda["femmine_nf"] == 5
+    assert scheda["studio_tot"] is None
