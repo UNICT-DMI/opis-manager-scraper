@@ -1,4 +1,4 @@
-name: Python Test CI
+name: Python CI pipeline
 
 on:
   push:
@@ -7,8 +7,7 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  test:
-
+  lint-type-test:
     runs-on: ubuntu-latest
     
     defaults:
@@ -29,7 +28,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-  
-    - name: Esecuzione dei test
+
+    - name: Controllo Formattazione
       run: |
-        pytest -v
+        black --check src tests
+
+    - name: Controllo Tipizzazione
+      run: |
+        pyright src tests
+
+    - name: Esecuzione dei test con Coverage
+      run: |
+        pytest --cov=src --cov-report=term-missing
