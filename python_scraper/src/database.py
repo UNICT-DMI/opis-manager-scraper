@@ -23,14 +23,11 @@ def connect_to_db():
 
     try:
         _connection = mysql.connector.connect(
-            host=host,
-            port=port,
-            user=user,
-            password=password,
-            database=database
+            host=host, port=port, user=user, password=password, database=database
         )
         logger.info(
-            f"Connessione al database MySQL '{database}' stabilita con successo.")
+            f"Connessione al database MySQL '{database}' stabilita con successo."
+        )
     except Error as e:
         logger.error(f"Errore di connessione a MySQL: {e}")
         raise
@@ -57,15 +54,19 @@ def insert_department(department) -> int:
             VALUES (%s, %s, %s)
         """
 
-        valori_insert = (department.nome, department.unict_id,
-                         department.anno_accademico)
+        valori_insert = (
+            department.nome,
+            department.unict_id,
+            department.anno_accademico,
+        )
 
         cursor.execute(query_insert, valori_insert)
         _connection.commit()
 
-        query_select = "SELECT id FROM dipartimento WHERE unict_id = %s AND anno_accademico = %s"
-        cursor.execute(query_select, (department.unict_id,
-                                      department.anno_accademico))
+        query_select = (
+            "SELECT id FROM dipartimento WHERE unict_id = %s AND anno_accademico = %s"
+        )
+        cursor.execute(query_select, (department.unict_id, department.anno_accademico))
 
         result = cursor.fetchone()
         cursor.close()
@@ -73,7 +74,8 @@ def insert_department(department) -> int:
         return int(result[0]) if result else -1  # type: ignore
     except Error as e:
         logger.error(
-            f"Errore DB durante l'inserimento del dipartimento '{department.nome}': {e}")
+            f"Errore DB durante l'inserimento del dipartimento '{department.nome}': {e}"
+        )
         return -1
 
 
@@ -94,13 +96,15 @@ def insert_course(course, dipartimento_internal_id: int) -> int:
             course.anno_accademico,
             course.nome,
             course.classe,
-            dipartimento_internal_id
+            dipartimento_internal_id,
         )
 
         cursor.execute(query_insert, valori_insert)
         _connection.commit()
 
-        query_select = "SELECT id FROM corso_di_studi WHERE unict_id = %s AND anno_accademico = %s"
+        query_select = (
+            "SELECT id FROM corso_di_studi WHERE unict_id = %s AND anno_accademico = %s"
+        )
         cursor.execute(query_select, (course.unict_id, course.anno_accademico))
 
         result = cursor.fetchone()
@@ -108,8 +112,7 @@ def insert_course(course, dipartimento_internal_id: int) -> int:
 
         return result[0] if result else -1  # type: ignore
     except Error as e:
-        logger.error(
-            f"Errore DB durante l'inserimento del corso '{course.nome}': {e}")
+        logger.error(f"Errore DB durante l'inserimento del corso '{course.nome}': {e}")
         return -1
 
 
@@ -138,7 +141,7 @@ def insert_insegnamento(insegnamento, corso_internal_id: int) -> int:
             insegnamento.canale,
             insegnamento.id_modulo,
             insegnamento.ssd,
-            corso_internal_id
+            corso_internal_id,
         )
         cursor.execute(sql, val)
         _connection.commit()
@@ -149,7 +152,8 @@ def insert_insegnamento(insegnamento, corso_internal_id: int) -> int:
 
     except Error as e:
         logger.error(
-            f"Errore DB durante l'inserimento dell'insegnamento '{insegnamento.nome}': {e}")
+            f"Errore DB durante l'inserimento dell'insegnamento '{insegnamento.nome}': {e}"
+        )
         return -1
 
 
@@ -161,7 +165,7 @@ def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int):
     try:
         cursor = _connection.cursor()
         first_scheda_dict = vars(schede_opis[0]).copy()
-        first_scheda_dict['id_insegnamento'] = insegnamento_internal_id
+        first_scheda_dict["id_insegnamento"] = insegnamento_internal_id
         columns = list(first_scheda_dict.keys())
         placeholders = ", ".join(["%s"] * len(columns))
         cols_string = ", ".join(columns)
@@ -170,7 +174,7 @@ def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int):
 
         for scheda in schede_opis:
             s_dict = vars(scheda).copy()
-            s_dict['id_insegnamento'] = insegnamento_internal_id
+            s_dict["id_insegnamento"] = insegnamento_internal_id
             row_tuple = []
 
             for col in columns:
@@ -189,4 +193,5 @@ def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int):
 
     except Error as e:
         logger.error(
-            f"Errore DB durante il salvataggio di {len(schede_opis)} schede OPIS: {e}")
+            f"Errore DB durante il salvataggio di {len(schede_opis)} schede OPIS: {e}"
+        )

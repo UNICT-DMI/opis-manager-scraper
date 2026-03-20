@@ -19,8 +19,7 @@ def mock_db_connection(mocker):
 
     mock_conn.cursor.return_value = mock_cursor
 
-    mocker.patch("src.database.mysql.connector.connect",
-                 return_value=mock_conn)
+    mocker.patch("src.database.mysql.connector.connect", return_value=mock_conn)
 
     database._connection = mock_conn
 
@@ -41,8 +40,7 @@ def test_insert_department_success(mock_db_connection):
     mock_conn, mock_cursor = mock_db_connection
     mock_cursor.fetchone.return_value = (99,)
 
-    dip = Dipartimento(unict_id=123, nome="Informatica",
-                       anno_accademico="2023/2024")
+    dip = Dipartimento(unict_id=123, nome="Informatica", anno_accademico="2023/2024")
 
     # act
     result = database.insert_department(dip)
@@ -57,8 +55,7 @@ def test_insert_department_success(mock_db_connection):
 def test_insert_department_failure(mock_db_connection, caplog):
     _, mock_cursor = mock_db_connection
     mock_cursor.execute.side_effect = mysql.connector.Error("Errore DB")
-    dip = Dipartimento(unict_id=123, nome="Informatica",
-                       anno_accademico="2023/2024")
+    dip = Dipartimento(unict_id=123, nome="Informatica", anno_accademico="2023/2024")
 
     # act
     result = database.insert_department(dip)
@@ -72,8 +69,13 @@ def test_insert_course(mock_db_connection):
     mock_conn, mock_cursor = mock_db_connection
     mock_cursor.fetchone.return_value = (42,)
 
-    corso = CorsoDiStudi(unict_id="M12", nome="Matematica", classe="LM-40",
-                         anno_accademico="2023/2024", dipartimento_id=123)
+    corso = CorsoDiStudi(
+        unict_id="M12",
+        nome="Matematica",
+        classe="LM-40",
+        anno_accademico="2023/2024",
+        dipartimento_id=123,
+    )
 
     # act
     result = database.insert_course(corso, dipartimento_internal_id=99)
@@ -87,8 +89,13 @@ def test_insert_course(mock_db_connection):
 def test_insert_course_failure(mock_db_connection, caplog):
     _, mock_cursor = mock_db_connection
     mock_cursor.execute.side_effect = mysql.connector.Error("Errore DB")
-    corso = CorsoDiStudi(unict_id="M12", nome="Matematica", classe="LM-40",
-                         anno_accademico="2023/2024", dipartimento_id=123)
+    corso = CorsoDiStudi(
+        unict_id="M12",
+        nome="Matematica",
+        classe="LM-40",
+        anno_accademico="2023/2024",
+        dipartimento_id=123,
+    )
 
     # act
     result = database.insert_course(corso, dipartimento_internal_id=99)
@@ -102,8 +109,14 @@ def test_insert_insegnamento(mock_db_connection):
     mock_conn, mock_cursor = mock_db_connection
     mock_cursor.lastrowid = 100
 
-    ins = Insegnamento(codice_gomp=1010, id_cds="M12", anno_accademico="2023/2024",
-                       nome="Analisi I", docente="Mario Rossi", professor_tax="")
+    ins = Insegnamento(
+        codice_gomp=1010,
+        id_cds="M12",
+        anno_accademico="2023/2024",
+        nome="Analisi I",
+        docente="Mario Rossi",
+        professor_tax="",
+    )
 
     # act
     result = database.insert_insegnamento(ins, corso_internal_id=42)
@@ -117,8 +130,14 @@ def test_insert_insegnamento(mock_db_connection):
 def test_insert_insegnamento_failure(mock_db_connection, caplog):
     _, mock_cursor = mock_db_connection
     mock_cursor.execute.side_effect = mysql.connector.Error("Errore DB")
-    ins = Insegnamento(codice_gomp=1010, id_cds="M12", anno_accademico="2023/2024",
-                       nome="Analisi I", docente="Mario Rossi", professor_tax="")
+    ins = Insegnamento(
+        codice_gomp=1010,
+        id_cds="M12",
+        anno_accademico="2023/2024",
+        nome="Analisi I",
+        docente="Mario Rossi",
+        professor_tax="",
+    )
 
     result = database.insert_insegnamento(ins, corso_internal_id=42)
 
@@ -130,8 +149,17 @@ def test_insert_schede_opis(mock_db_connection):
     mock_conn, mock_cursor = mock_db_connection
 
     scheda = SchedaOpis(
-        anno_accademico="2023/2024", id_insegnamento=1010, totale_schede=5, totale_schede_nf=0, fc=0, inatt_nf=0,
-        domande=[1, 2, 3], domande_nf=[], motivo_nf=[], sugg=[], sugg_nf=[]
+        anno_accademico="2023/2024",
+        id_insegnamento=1010,
+        totale_schede=5,
+        totale_schede_nf=0,
+        fc=0,
+        inatt_nf=0,
+        domande=[1, 2, 3],
+        domande_nf=[],
+        motivo_nf=[],
+        sugg=[],
+        sugg_nf=[],
     )
 
     # act
@@ -147,7 +175,7 @@ def test_insert_schede_opis(mock_db_connection):
     assert len(valori_passati) == 1
 
     riga_inserita = valori_passati[0]
-    assert '[1, 2, 3]' in riga_inserita
+    assert "[1, 2, 3]" in riga_inserita
     mock_conn.commit.assert_called_once()
 
 
@@ -155,8 +183,17 @@ def test_insert_schede_opis_failure(mock_db_connection, caplog):
     _, mock_cursor = mock_db_connection
     mock_cursor.executemany.side_effect = mysql.connector.Error("Errore DB")
     scheda = SchedaOpis(
-        anno_accademico="2023/2024", id_insegnamento=1010, totale_schede=5, totale_schede_nf=0, fc=0, inatt_nf=0,
-        domande=[1, 2, 3], domande_nf=[], motivo_nf=[], sugg=[], sugg_nf=[]
+        anno_accademico="2023/2024",
+        id_insegnamento=1010,
+        totale_schede=5,
+        totale_schede_nf=0,
+        fc=0,
+        inatt_nf=0,
+        domande=[1, 2, 3],
+        domande_nf=[],
+        motivo_nf=[],
+        sugg=[],
+        sugg_nf=[],
     )
 
     database.insert_schede_opis([scheda], insegnamento_internal_id=100)
@@ -186,15 +223,34 @@ def test_close_connection():
 
 def test_inserts_without_connection(caplog):
     database._connection = None
-    dip = Dipartimento(unict_id=1, nome="Dipartimento",
-                       anno_accademico="23/24")
-    corso = CorsoDiStudi(unict_id="C1", nome="Corso",
-                         classe="L", anno_accademico="23/24", dipartimento_id=1)
-    ins = Insegnamento(codice_gomp=1, id_cds="C1", anno_accademico="23/24",
-                       nome="Materia", docente="Doc", professor_tax="")
+    dip = Dipartimento(unict_id=1, nome="Dipartimento", anno_accademico="23/24")
+    corso = CorsoDiStudi(
+        unict_id="C1",
+        nome="Corso",
+        classe="L",
+        anno_accademico="23/24",
+        dipartimento_id=1,
+    )
+    ins = Insegnamento(
+        codice_gomp=1,
+        id_cds="C1",
+        anno_accademico="23/24",
+        nome="Materia",
+        docente="Doc",
+        professor_tax="",
+    )
     scheda = SchedaOpis(
-        anno_accademico="23/24", id_insegnamento=1010, totale_schede=5, totale_schede_nf=0, fc=0, inatt_nf=0,
-        domande=[1, 2], domande_nf=[], motivo_nf=[], sugg=[], sugg_nf=[]
+        anno_accademico="23/24",
+        id_insegnamento=1010,
+        totale_schede=5,
+        totale_schede_nf=0,
+        fc=0,
+        inatt_nf=0,
+        domande=[1, 2],
+        domande_nf=[],
+        motivo_nf=[],
+        sugg=[],
+        sugg_nf=[],
     )
 
     assert database.insert_department(dip) == -1

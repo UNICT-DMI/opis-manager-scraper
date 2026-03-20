@@ -28,9 +28,9 @@ def parse_course_name(full_name: Optional[str]) -> Tuple[str, str]:
     if match:
 
         classe = match.group(1).upper()
-        nome = full_name[:match.start()].strip()
+        nome = full_name[: match.start()].strip()
 
-        if nome.endswith('-'):
+        if nome.endswith("-"):
             nome = nome[:-1].strip()
 
         return nome, classe
@@ -73,11 +73,13 @@ def parse_insegnamento_data(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "id_modulo": id_modulo,
         "nome_modulo": item.get("partName"),
         "ssd": item.get("SSDsigla"),
-        "professor_tax": item.get("professorTaxCode", "")
+        "professor_tax": item.get("professorTaxCode", ""),
     }
 
 
-def _aggiorna_statistica_json(record: Dict[str, Any], campo: str, labels: List[str], values: List[Any]) -> None:
+def _aggiorna_statistica_json(
+    record: Dict[str, Any], campo: str, labels: List[str], values: List[Any]
+) -> None:
     if record[campo] is None:
         record[campo] = {}
     for i, lbl in enumerate(labels):
@@ -107,7 +109,7 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         "num_studenti": None,
         "ragg_uni": None,
         "studio_gg": None,
-        "studio_tot": None
+        "studio_tot": None,
     }
 
     for cluster in clusters:
@@ -143,11 +145,16 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
                 offset = -1
                 match a_code:
-                    case "R1": offset = 0
-                    case "R2": offset = 1
-                    case "R3": offset = 2
-                    case "R4": offset = 3
-                    case "R5": offset = 4
+                    case "R1":
+                        offset = 0
+                    case "R2":
+                        offset = 1
+                    case "R3":
+                        offset = 2
+                    case "R4":
+                        offset = 3
+                    case "R5":
+                        offset = 4
 
                 if offset >= 0:
                     domande_flat[base_offset + offset] = count
@@ -176,33 +183,31 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     _aggiorna_statistica_json(record, "eta", labels, values)
 
                 case lbl if "numero medio di studenti" in lbl:
-                    _aggiorna_statistica_json(
-                        record, "num_studenti", labels, values)
+                    _aggiorna_statistica_json(record, "num_studenti", labels, values)
 
                 case lbl if any(k in lbl for k in ["studio autonomo", "giornalmente"]):
-                    _aggiorna_statistica_json(
-                        record, "studio_gg", labels, values)
+                    _aggiorna_statistica_json(record, "studio_gg", labels, values)
 
                 case lbl if "ore di studio, in totale" in lbl:
-                    _aggiorna_statistica_json(
-                        record, "studio_tot", labels, values)
+                    _aggiorna_statistica_json(record, "studio_tot", labels, values)
 
                 case lbl if any(k in lbl for k in ["domicilio", "tempo impiega"]):
-                    _aggiorna_statistica_json(
-                        record, "ragg_uni", labels, values)
+                    _aggiorna_statistica_json(record, "ragg_uni", labels, values)
 
                 case lbl if any(k in lbl for k in ["sesso", "genere", "gender"]):
                     femmine_count = 0
                     for i, lbl_sesso in enumerate(labels):
-                        if lbl_sesso.lower() in ["f", "femmina", "femmine"] and i < len(values):
+                        if lbl_sesso.lower() in ["f", "femmina", "femmine"] and i < len(
+                            values
+                        ):
                             femmine_count += int(values[i])
 
                     if is_nf_graph:
-                        record["femmine_nf"] = (record.get(
-                            "femmine_nf") or 0) + femmine_count
+                        record["femmine_nf"] = (
+                            record.get("femmine_nf") or 0
+                        ) + femmine_count
                     else:
-                        record["femmine"] = (record.get(
-                            "femmine") or 0) + femmine_count
+                        record["femmine"] = (record.get("femmine") or 0) + femmine_count
 
                 case lbl if any(k in lbl for k in ["fuori corso", "iscrizione"]):
                     fc_count = 0

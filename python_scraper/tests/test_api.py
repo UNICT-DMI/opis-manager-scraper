@@ -11,34 +11,50 @@ import requests.exceptions
 @pytest.mark.parametrize(
     "year, expected_payload_subset, mock_response_data, expected_result",
     [
-        (2024, {"surveys": "", "academicYear": 2024}, [
-         {"code": "1001", "name": "Dipartimento di Matematica"}, {"code": None, "name": "TOTALE"}],
-         [
-            Dipartimento(
-                unict_id=1001,
-                nome="Dipartimento di Matematica",
-                anno_accademico="2024/2025"
-            )
-        ]),
-        (2024, {"surveys": "", "academicYear": 2024}, [
-         {"code": None, "name": "TOTALE"}], []),
-        (2021, {"surveys": "", "academicYear": 2021}, [
-         {"code": "1002", "name": "Dipartimento di Informatica"}, {"code": None, "name": "TOTALE"}],
-         [
-            Dipartimento(
-                unict_id=1002,
-                nome="Dipartimento di Informatica",
-                anno_accademico="2021/2022"
-            )
-        ]),
-    ]
+        (
+            2024,
+            {"surveys": "", "academicYear": 2024},
+            [
+                {"code": "1001", "name": "Dipartimento di Matematica"},
+                {"code": None, "name": "TOTALE"},
+            ],
+            [
+                Dipartimento(
+                    unict_id=1001,
+                    nome="Dipartimento di Matematica",
+                    anno_accademico="2024/2025",
+                )
+            ],
+        ),
+        (
+            2024,
+            {"surveys": "", "academicYear": 2024},
+            [{"code": None, "name": "TOTALE"}],
+            [],
+        ),
+        (
+            2021,
+            {"surveys": "", "academicYear": 2021},
+            [
+                {"code": "1002", "name": "Dipartimento di Informatica"},
+                {"code": None, "name": "TOTALE"},
+            ],
+            [
+                Dipartimento(
+                    unict_id=1002,
+                    nome="Dipartimento di Informatica",
+                    anno_accademico="2021/2022",
+                )
+            ],
+        ),
+    ],
 )
 def test_get_departments(
     mocker: MockerFixture,
     year: int,
     expected_payload_subset: Dict[str, Any],
     mock_response_data: List[Dict[str, Any]],
-    expected_result: List[Dipartimento]
+    expected_result: List[Dipartimento],
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getDepartments"
@@ -61,18 +77,12 @@ def test_get_departments(
         assert actual_payload[key] == value
 
 
-@pytest.mark.parametrize(
-    "year", [2024, 2023, 2022, 2021]
-)
-def test_get_departments_api_failure(
-    mocker: MockerFixture,
-    year: int
-) -> None:
+@pytest.mark.parametrize("year", [2024, 2023, 2022, 2021])
+def test_get_departments_api_failure(mocker: MockerFixture, year: int) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getDepartments"
     mock_post = mocker.patch("src.api_client.session.post")
-    mock_post.side_effect = requests.exceptions.ConnectionError(
-        "API non raggiungibile")
+    mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
     # act
     result = get_departments(year)
@@ -95,37 +105,42 @@ def test_get_departments_api_failure(
             2024,
             12345,
             {"surveys": "", "academicYear": 2024, "departmentCode": "12345"},
-            [{"code": "M12", "name": "Matematica LM-40"},
-                {"code": None, "name": "TOTALE"}],
-            [CorsoDiStudi(
-                unict_id="M12",
-                nome="Matematica",
-                classe="LM-40",
-                anno_accademico="2024/2025",
-                dipartimento_id=12345)
-             ]
+            [
+                {"code": "M12", "name": "Matematica LM-40"},
+                {"code": None, "name": "TOTALE"},
+            ],
+            [
+                CorsoDiStudi(
+                    unict_id="M12",
+                    nome="Matematica",
+                    classe="LM-40",
+                    anno_accademico="2024/2025",
+                    dipartimento_id=12345,
+                )
+            ],
         ),
         (
             2024,
             12345,
             {"surveys": "", "academicYear": 2024, "departmentCode": "12345"},
             [{"code": None, "name": "TOTALE"}],
-            []
+            [],
         ),
         (
             2021,
             98765,
             {"surveys": "", "academicYear": 2021, "departmentCode": "98765"},
-            [{"code": "F34", "name": "Fisica L-30"},
-                {"code": None, "name": "TOTALE"}],
-            [CorsoDiStudi(
-                unict_id="F34",
-                nome="Fisica",
-                classe="L-30",
-                anno_accademico="2021/2022",
-                dipartimento_id=98765)
-             ]
-        )
+            [{"code": "F34", "name": "Fisica L-30"}, {"code": None, "name": "TOTALE"}],
+            [
+                CorsoDiStudi(
+                    unict_id="F34",
+                    nome="Fisica",
+                    classe="L-30",
+                    anno_accademico="2021/2022",
+                    dipartimento_id=98765,
+                )
+            ],
+        ),
     ],
 )
 def test_get_courses(
@@ -134,7 +149,7 @@ def test_get_courses(
     dept_code: int,
     expected_payload_subset: Dict[str, Any],
     mock_response_data: List[Dict[str, Any]],
-    expected_result: List[CorsoDiStudi]
+    expected_result: List[CorsoDiStudi],
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getCourses"
@@ -164,18 +179,15 @@ def test_get_courses(
         (2024, 12345),
         (2023, 67890),
         (2022, 11121),
-    ]
+    ],
 )
 def test_get_courses_api_failure(
-    mocker: MockerFixture,
-    year: int,
-    dept_code: int
+    mocker: MockerFixture, year: int, dept_code: int
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getCourses"
     mock_post = mocker.patch("src.api_client.session.post")
-    mock_post.side_effect = requests.exceptions.ConnectionError(
-        "API non raggiungibile")
+    mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
     # act
     result = get_courses(year, dept_code)
@@ -196,9 +208,15 @@ def test_get_courses_api_failure(
     "year, dept_code, course_code, expected_payload_subset, mock_response_data, expected_result",
     [
         (
-            2023, 190141, "W82",
-            {"surveys": "", "academicYear": 2023,
-                "departmentCode": "190141", "courseCode": "W82"},
+            2023,
+            190141,
+            "W82",
+            {
+                "surveys": "",
+                "academicYear": 2023,
+                "departmentCode": "190141",
+                "courseCode": "W82",
+            },
             [
                 {
                     "activityCode": "1001829",
@@ -208,31 +226,34 @@ def test_get_courses_api_failure(
                     "professorTaxCode": "",
                     "channel": None,
                     "partCode": None,
-                    "SSDsigla": "INF/01"
+                    "SSDsigla": "INF/01",
                 },
                 {
                     "activityCode": "A3688",
                     "activityName": "MATERIA SPORCA",
                     "professorName": "MARIO",
-                    "professorLastName": "ROSSI"
+                    "professorLastName": "ROSSI",
                 },
-                {"activityCode": None, "activityName": "TOTALE"}],
-            [Insegnamento(
-                codice_gomp=1001829,
-                id_cds="W82",
-                anno_accademico="2023/2024",
-                nome="ULTERIORI ATTIVITA'",
-                docente="GUARNERA FRANCESCO",
-                anno="",
-                semestre="",
-                cfu="",
-                canale="no",
-                id_modulo=0,
-                ssd="INF/01",
-                professor_tax=""
-            )]
+                {"activityCode": None, "activityName": "TOTALE"},
+            ],
+            [
+                Insegnamento(
+                    codice_gomp=1001829,
+                    id_cds="W82",
+                    anno_accademico="2023/2024",
+                    nome="ULTERIORI ATTIVITA'",
+                    docente="GUARNERA FRANCESCO",
+                    anno="",
+                    semestre="",
+                    cfu="",
+                    canale="no",
+                    id_modulo=0,
+                    ssd="INF/01",
+                    professor_tax="",
+                )
+            ],
         )
-    ]
+    ],
 )
 def test_get_activities(
     mocker: MockerFixture,
@@ -241,7 +262,7 @@ def test_get_activities(
     course_code: str,
     expected_payload_subset: Dict[str, Any],
     mock_response_data: List[Dict[str, Any]],
-    expected_result: List[Insegnamento]
+    expected_result: List[Insegnamento],
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getActivities"
@@ -270,19 +291,15 @@ def test_get_activities(
     [
         (2024, 12345, "M12"),
         (2023, 67890, "F34"),
-    ]
+    ],
 )
 def test_get_activities_api_failure(
-    mocker: MockerFixture,
-    year: int,
-    dept_code: int,
-    course_code: str
+    mocker: MockerFixture, year: int, dept_code: int, course_code: str
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getActivities"
     mock_post = mocker.patch("src.api_client.session.post")
-    mock_post.side_effect = requests.exceptions.ConnectionError(
-        "API non raggiungibile")
+    mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
     # act
     result = get_activities(year, dept_code, course_code)
@@ -305,15 +322,21 @@ def test_get_activities_api_failure(
     [
         # CASO 1: Successo
         (
-            2023, 190141, "W82", 1014456, "PROFCF123",
+            2023,
+            190141,
+            "W82",
+            1014456,
+            "PROFCF123",
             {
-                "clusterData": [{
-                    "cluster": {"Text": "Test Cluster"},
-                    "questions": [
-                        {"questionCode": "1", "submissions": 10, "answers": []}
-                    ]
-                }],
-                "graphPieList": []
+                "clusterData": [
+                    {
+                        "cluster": {"Text": "Test Cluster"},
+                        "questions": [
+                            {"questionCode": "1", "submissions": 10, "answers": []}
+                        ],
+                    }
+                ],
+                "graphPieList": [],
             },
             {
                 "surveys": "",
@@ -322,7 +345,7 @@ def test_get_activities_api_failure(
                 "courseCode": "W82",
                 "activityCode": "1014456",
                 "partCode": "null",
-                "professor": "PROFCF123"
+                "professor": "PROFCF123",
             },
             [
                 SchedaOpis(
@@ -336,13 +359,17 @@ def test_get_activities_api_failure(
                     domande_nf=[0] * 60,
                     motivo_nf=[],
                     sugg=[],
-                    sugg_nf=[]
+                    sugg_nf=[],
                 )
-            ]
+            ],
         ),
         # CASO 2: Nessun dato trovato
         (
-            2023, 190141, "W82", 9999999, "",
+            2023,
+            190141,
+            "W82",
+            9999999,
+            "",
             {"clusterData": [], "graphPieList": []},
             {
                 "surveys": "",
@@ -351,7 +378,7 @@ def test_get_activities_api_failure(
                 "courseCode": "W82",
                 "activityCode": "9999999",
                 "partCode": "null",
-                "professor": ""
+                "professor": "",
             },
             [
                 SchedaOpis(
@@ -365,10 +392,11 @@ def test_get_activities_api_failure(
                     domande_nf=[0] * 60,
                     motivo_nf=[],
                     sugg=[],
-                    sugg_nf=[]
-                )]
-        )
-    ]
+                    sugg_nf=[],
+                )
+            ],
+        ),
+    ],
 )
 def test_get_questions(
     mocker: MockerFixture,
@@ -379,7 +407,7 @@ def test_get_questions(
     prof_tax: str,
     mock_response: Dict[str, Any],
     expected_payload: Dict[str, Any],
-    expected_result: List[SchedaOpis]
+    expected_result: List[SchedaOpis],
 ) -> None:
     # arange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getQuestions"
@@ -388,8 +416,7 @@ def test_get_questions(
     mock_post.return_value.json.return_value = mock_response
 
     # act
-    result = get_questions(year, dept_code, course_code,
-                           activity_code, prof_tax)
+    result = get_questions(year, dept_code, course_code, activity_code, prof_tax)
 
     # assert
     mock_post.assert_called_once()
@@ -404,7 +431,7 @@ def test_get_questions(
     [
         (2024, 12345, "M12", 987654, "PROFCF1"),
         (2023, 67890, "F34", 112233, "PROFCF2"),
-    ]
+    ],
 )
 def test_get_questions_failure(
     mocker: MockerFixture,
@@ -412,19 +439,18 @@ def test_get_questions_failure(
     dept_code: int,
     course_code: str,
     activity_code: int,
-    prof_tax: str
+    prof_tax: str,
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getQuestions"
     mock_post = mocker.patch("src.api_client.session.post")
 
     import requests
-    mock_post.side_effect = requests.exceptions.ConnectionError(
-        "API non raggiungibile")
+
+    mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
     # act
-    result = get_questions(year, dept_code, course_code,
-                           activity_code, prof_tax)
+    result = get_questions(year, dept_code, course_code, activity_code, prof_tax)
 
     # assert
     assert result == []
