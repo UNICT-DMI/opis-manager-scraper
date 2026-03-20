@@ -39,4 +39,4 @@ jobs:
 
     - name: Esecuzione dei test con Coverage
       run: |
-        pytest --cov=src --cov-report=term-missing
+        pytest --cov=src --cov-report=term-missing --cov-fail-under=80
