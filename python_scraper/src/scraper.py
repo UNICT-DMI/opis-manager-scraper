@@ -1,8 +1,11 @@
+from sys import modules
+from typing import List
 import logging
 import time
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.api_client import get_departments, get_courses, get_activities, get_questions
+from src.models import Insegnamento
 from src.database import (
     connect_to_db,
     close_connection,
@@ -22,6 +25,38 @@ DELAY = 1.0
 
 MAX_WORKERS = 3
 DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() in ("true", "1", "t")
+
+
+def assign_channels(activities: List[Insegnamento]) -> List[Insegnamento]:
+    grouped_activities = {}
+
+    for activity in activities:
+        grouped_activities.setdefault(activity.nome, []).append(activity)
+
+    for _, group in grouped_activities.items():
+        channel_content = {}
+        for activity in group:
+            current_module = (
+                activity.nome_modulo if activity.nome_modulo else "MODULO_UNICO"
+            )
+            assigned_channel = None
+
+            for num_channel, modules in channel_content.items():
+                if current_module not in modules:
+                    assigned_channel = num_channel
+                    break
+
+            if assigned_channel is None:
+                assigned_channel = len(channel_content) + 1
+                channel_content[assigned_channel] = set()
+
+            channel_content[assigned_channel].add(current_module)
+            activity.canale = str(assigned_channel)
+
+        if len(channel_content) == 1:
+            for activity in group:
+                activity.canale = "no"
+    return activities
 
 
 def process_activity(year: int, dept_code: int, course_code: str, activity):
@@ -69,6 +104,8 @@ def process_course(year: int, dept_code: int, course, dip_internal_id: int):
     if DEBUG_MODE and activities:
         campione = min(5, len(activities))
         activities = random.sample(activities, campione)
+
+    activities = assign_channels(activities)
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = [
