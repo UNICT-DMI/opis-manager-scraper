@@ -226,6 +226,7 @@ def test_get_courses_api_failure(
                     "professorTaxCode": "",
                     "channel": None,
                     "partCode": None,
+                    "partName": "LABORATORIO",
                     "SSDsigla": "INF/01",
                 },
                 {
@@ -248,6 +249,7 @@ def test_get_courses_api_failure(
                     cfu="",
                     canale="no",
                     id_modulo=0,
+                    nome_modulo="LABORATORIO",
                     ssd="INF/01",
                     professor_tax="",
                 )
