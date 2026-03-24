@@ -126,8 +126,8 @@ def insert_insegnamento(insegnamento, corso_internal_id: int) -> int:
 
         sql = """
             INSERT INTO insegnamento 
-            (anno_accademico, anno, semestre, nome, docente, codice_gomp, cfu, canale, id_modulo, ssd, id_cds)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (anno_accademico, anno, semestre, nome, docente, codice_gomp, cfu, canale, id_modulo, nome_modulo, ssd, id_cds)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         val = (
@@ -140,6 +140,7 @@ def insert_insegnamento(insegnamento, corso_internal_id: int) -> int:
             insegnamento.cfu,
             insegnamento.canale,
             insegnamento.id_modulo,
+            insegnamento.nome_modulo,
             insegnamento.ssd,
             corso_internal_id,
         )

@@ -156,6 +156,7 @@ def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnam
                 professor_tax=insegnamento_data["professor_tax"],
                 canale=insegnamento_data["canale"],
                 id_modulo=insegnamento_data["id_modulo"],
+                nome_modulo=insegnamento_data["nome_modulo"],
                 ssd=insegnamento_data["ssd"],
             )
             insegnamenti.append(insegnamento)
