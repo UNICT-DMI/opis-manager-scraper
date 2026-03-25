@@ -9,19 +9,18 @@ def parse_course_name(full_name: Optional[str]) -> Tuple[str, str]:
 
     full_name = full_name.strip()
 
-    # Regex potenziata:
-    # \s+                  -> Spazio iniziale
-    # \(?                  -> Parentesi aperta opzionale
-    # (                    -> INIZIO GRUPPO 1 (quello che estraiamo come classe)
-    #   L(?:M|MCU)?        -> Base: L, LM, o LMCU
-    #   (?:-|\/)           -> Separatore: accetta sia il trattino "-" che la slash "/"
-    #   (?:[0-9]+|SNT[0-9]+) -> Valore: accetta numeri puri (es. 4, 31) o sigla SNT + numeri (es. SNT1)
-    #   (?:\s*c\.?u\.?)?   -> Ciclo Unico opzionale: accetta "cu" o "c.u." (con o senza spazi e punti)
-    #   (?:\s*R)?          -> Riformato opzionale: la lettera "R" (con o senza spazi prima)
-    # )                    -> FINE GRUPPO 1
-    # \)?                  -> Parentesi chiusa opzionale
-    # \s*$                 -> Spazi finali opzionali e fine stringa
-    pattern = r"\s+\(?(L(?:M|MCU)?(?:-|\/)(?:[0-9]+|SNT[0-9]+)(?:\s*c\.?u\.?)?(?:\s*R)?)\)?\s*$"
+    # Regex universale e sicura:
+    # \s+              -> Spazio che separa il nome dalla classe
+    # \(?              -> Ignora eventuale parentesi tonda aperta
+    # (                -> INIZIO GRUPPO 1 (Quello che salveremo come 'classe')
+    #   L[a-z]* -> "L" seguita da lettere opzionali (L, LM, LMCU, LMG...)
+    #   [-/]           -> Separatore obbligatorio (trattino o slash)
+    #   (?:\d|snt)     -> Dopo il separatore DEVE esserci un numero (\d) o "snt"
+    #   .*?            -> Cattura TUTTO il resto in modo pigro (altre classi, virgole, R, cu...)
+    # )                -> FINE GRUPPO 1
+    # \)?              -> Ignora eventuale parentesi tonda chiusa
+    # \s*$             -> Fine stringa (ignorando eventuali spazi vuoti finali)
+    pattern = r"\s+\(?(L[a-z]*[-/](?:\d|snt).*?)\)?\s*$"
 
     match = re.search(pattern, full_name, re.IGNORECASE)
 
@@ -183,16 +182,20 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     _aggiorna_statistica_json(record, "eta", labels, values)
 
                 case lbl if "numero medio di studenti" in lbl:
-                    _aggiorna_statistica_json(record, "num_studenti", labels, values)
+                    _aggiorna_statistica_json(
+                        record, "num_studenti", labels, values)
 
                 case lbl if any(k in lbl for k in ["studio autonomo", "giornalmente"]):
-                    _aggiorna_statistica_json(record, "studio_gg", labels, values)
+                    _aggiorna_statistica_json(
+                        record, "studio_gg", labels, values)
 
                 case lbl if "ore di studio, in totale" in lbl:
-                    _aggiorna_statistica_json(record, "studio_tot", labels, values)
+                    _aggiorna_statistica_json(
+                        record, "studio_tot", labels, values)
 
                 case lbl if any(k in lbl for k in ["domicilio", "tempo impiega"]):
-                    _aggiorna_statistica_json(record, "ragg_uni", labels, values)
+                    _aggiorna_statistica_json(
+                        record, "ragg_uni", labels, values)
 
                 case lbl if any(k in lbl for k in ["sesso", "genere", "gender"]):
                     femmine_count = 0
@@ -207,7 +210,8 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                             record.get("femmine_nf") or 0
                         ) + femmine_count
                     else:
-                        record["femmine"] = (record.get("femmine") or 0) + femmine_count
+                        record["femmine"] = (record.get(
+                            "femmine") or 0) + femmine_count
 
                 case lbl if any(k in lbl for k in ["fuori corso", "iscrizione"]):
                     fc_count = 0
