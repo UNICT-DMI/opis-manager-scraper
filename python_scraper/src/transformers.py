@@ -182,20 +182,16 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     _aggiorna_statistica_json(record, "eta", labels, values)
 
                 case lbl if "numero medio di studenti" in lbl:
-                    _aggiorna_statistica_json(
-                        record, "num_studenti", labels, values)
+                    _aggiorna_statistica_json(record, "num_studenti", labels, values)
 
                 case lbl if any(k in lbl for k in ["studio autonomo", "giornalmente"]):
-                    _aggiorna_statistica_json(
-                        record, "studio_gg", labels, values)
+                    _aggiorna_statistica_json(record, "studio_gg", labels, values)
 
                 case lbl if "ore di studio, in totale" in lbl:
-                    _aggiorna_statistica_json(
-                        record, "studio_tot", labels, values)
+                    _aggiorna_statistica_json(record, "studio_tot", labels, values)
 
                 case lbl if any(k in lbl for k in ["domicilio", "tempo impiega"]):
-                    _aggiorna_statistica_json(
-                        record, "ragg_uni", labels, values)
+                    _aggiorna_statistica_json(record, "ragg_uni", labels, values)
 
                 case lbl if any(k in lbl for k in ["sesso", "genere", "gender"]):
                     femmine_count = 0
@@ -210,8 +206,7 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                             record.get("femmine_nf") or 0
                         ) + femmine_count
                     else:
-                        record["femmine"] = (record.get(
-                            "femmine") or 0) + femmine_count
+                        record["femmine"] = (record.get("femmine") or 0) + femmine_count
 
                 case lbl if any(k in lbl for k in ["fuori corso", "iscrizione"]):
                     fc_count = 0

@@ -29,12 +29,11 @@ from src.transformers import (
         ("Biotecnologie Agrarie (LM-7 R)", "Biotecnologie Agrarie", "LM-7 R"),
         # --- CASO GIURISPRUDENZA (LMG) ---
         ("Giurisprudenza LMG/01 R", "Giurisprudenza", "LMG/01 R"),
-
         # --- CASI CON PIÙ CLASSI (Virgole e sigle diverse) ---
         (
             "Sociologia e servizio sociale L-39 R, LM-40 R",
             "Sociologia e servizio sociale",
-            "L-39 R, LM-40 R"
+            "L-39 R, LM-40 R",
         ),
         ("Lettere (L-10, L-20)", "Lettere", "L-10, L-20"),
         # --- CASI CON PROFESSIONI SANITARIE (L/SNT) ---
@@ -234,8 +233,7 @@ def mock_opis_json() -> dict[str, Any]:
                     },
                     {
                         "datasets": [
-                            {"label": "Genere degli studenti",
-                                "data": [10.0, 15.0]}
+                            {"label": "Genere degli studenti", "data": [10.0, 15.0]}
                         ],
                         "labels": ["M", "F"],
                     },
@@ -250,8 +248,7 @@ def mock_opis_json() -> dict[str, Any]:
                     },
                     {
                         "datasets": [
-                            {"label": "Anno di iscrizione",
-                                "data": [20.0, 4.0]}
+                            {"label": "Anno di iscrizione", "data": [20.0, 4.0]}
                         ],
                         "labels": ["In corso", "Fuori corso"],
                     },
@@ -266,8 +263,7 @@ def mock_opis_json() -> dict[str, Any]:
                     },
                     {
                         "datasets": [
-                            {"label": "Studio autonomo giornalmente",
-                                "data": [8.0]}
+                            {"label": "Studio autonomo giornalmente", "data": [8.0]}
                         ],
                         "labels": ["2 ore"],
                     },
@@ -287,10 +283,8 @@ def mock_opis_json() -> dict[str, Any]:
             {
                 "name": "Non Frequentanti",
                 "dataPie": [
-                    {"datasets": [{"label": "Età", "data": [100.0]}],
-                        "labels": ["99"]},
-                    {"datasets": [
-                        {"label": "Genere", "data": [5.0]}], "labels": ["F"]},
+                    {"datasets": [{"label": "Età", "data": [100.0]}], "labels": ["99"]},
+                    {"datasets": [{"label": "Genere", "data": [5.0]}], "labels": ["F"]},
                 ],
             },
         ],

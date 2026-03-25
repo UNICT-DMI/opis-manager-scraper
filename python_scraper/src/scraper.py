@@ -64,8 +64,7 @@ def assign_channels(activities: List[Insegnamento]) -> List[Insegnamento]:
 
 def process_activity(year: int, dept_code: int, course_code: str, activity):
     if not activity.professor_tax:
-        logger.warning(
-            f"      [SKIP] {activity.nome}: codice docente mancante.")
+        logger.warning(f"      [SKIP] {activity.nome}: codice docente mancante.")
         return
 
     logger.info(f"      [FETCH] Chiamata in corso per: {activity.nome}...")
@@ -130,12 +129,10 @@ def process_course(year: int, dept_code: int, course, dip_internal_id: int):
                     )
 
                     if insegnamento_internal_id != -1 and schede_opis:
-                        insert_schede_opis(
-                            schede_opis, insegnamento_internal_id)
+                        insert_schede_opis(schede_opis, insegnamento_internal_id)
 
             except Exception as e:
-                logger.error(
-                    f"Errore inatteso durante l'analisi di una materia: {e}")
+                logger.error(f"Errore inatteso durante l'analisi di una materia: {e}")
 
 
 def process_department(year: int, department):
@@ -168,8 +165,7 @@ def run_scraper():
     try:
         for year in ACCADEMIC_YEARS:
             logger.info(f"==========================================")
-            logger.info(
-                f" INIZIO ELABORAZIONE ANNO ACCADEMICO {year}/{year+1}")
+            logger.info(f" INIZIO ELABORAZIONE ANNO ACCADEMICO {year}/{year+1}")
             logger.info(f"==========================================")
             logger.info(
                 f"Chiamata API in corso per scaricare i dipartimenti del {year}..."
@@ -182,8 +178,7 @@ def run_scraper():
                 campione = min(DEBUG_NUM_DEPARTMENTS, len(departments))
                 departments = random.sample(departments, campione)
 
-            logger.info(
-                f"Trovati {len(departments)} dipartimenti per l'anno {year}.")
+            logger.info(f"Trovati {len(departments)} dipartimenti per l'anno {year}.")
 
             for department in departments:
                 process_department(year, department)
