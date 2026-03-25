@@ -27,6 +27,16 @@ from src.transformers import (
             "L-26 R",
         ),
         ("Biotecnologie Agrarie (LM-7 R)", "Biotecnologie Agrarie", "LM-7 R"),
+        # --- CASO GIURISPRUDENZA (LMG) ---
+        ("Giurisprudenza LMG/01 R", "Giurisprudenza", "LMG/01 R"),
+
+        # --- CASI CON PIÙ CLASSI (Virgole e sigle diverse) ---
+        (
+            "Sociologia e servizio sociale L-39 R, LM-40 R",
+            "Sociologia e servizio sociale",
+            "L-39 R, LM-40 R"
+        ),
+        ("Lettere (L-10, L-20)", "Lettere", "L-10, L-20"),
         # --- CASI CON PROFESSIONI SANITARIE (L/SNT) ---
         (
             "Ostetricia (abilitante alla professione sanitaria di Ostetrica/o) L/SNT1",
@@ -46,6 +56,8 @@ from src.transformers import (
         # --- CASI CON C.U. (Ciclo Unico esplicito) ---
         ("Architettura LM-4 c.u. R", "Architettura", "LM-4 C.U. R"),
         ("Farmacia (LM-41 cu)", "Farmacia", "LM-41 CU"),
+        # --- CASO LIMITE (FALSO POSITIVO NEL NOME) ---
+        ("Corso in L-Design L-4", "Corso in L-Design", "L-4"),
     ],
 )
 def test_parse_course_name(
@@ -222,7 +234,8 @@ def mock_opis_json() -> dict[str, Any]:
                     },
                     {
                         "datasets": [
-                            {"label": "Genere degli studenti", "data": [10.0, 15.0]}
+                            {"label": "Genere degli studenti",
+                                "data": [10.0, 15.0]}
                         ],
                         "labels": ["M", "F"],
                     },
@@ -237,7 +250,8 @@ def mock_opis_json() -> dict[str, Any]:
                     },
                     {
                         "datasets": [
-                            {"label": "Anno di iscrizione", "data": [20.0, 4.0]}
+                            {"label": "Anno di iscrizione",
+                                "data": [20.0, 4.0]}
                         ],
                         "labels": ["In corso", "Fuori corso"],
                     },
@@ -252,7 +266,8 @@ def mock_opis_json() -> dict[str, Any]:
                     },
                     {
                         "datasets": [
-                            {"label": "Studio autonomo giornalmente", "data": [8.0]}
+                            {"label": "Studio autonomo giornalmente",
+                                "data": [8.0]}
                         ],
                         "labels": ["2 ore"],
                     },
@@ -272,8 +287,10 @@ def mock_opis_json() -> dict[str, Any]:
             {
                 "name": "Non Frequentanti",
                 "dataPie": [
-                    {"datasets": [{"label": "Età", "data": [100.0]}], "labels": ["99"]},
-                    {"datasets": [{"label": "Genere", "data": [5.0]}], "labels": ["F"]},
+                    {"datasets": [{"label": "Età", "data": [100.0]}],
+                        "labels": ["99"]},
+                    {"datasets": [
+                        {"label": "Genere", "data": [5.0]}], "labels": ["F"]},
                 ],
             },
         ],
