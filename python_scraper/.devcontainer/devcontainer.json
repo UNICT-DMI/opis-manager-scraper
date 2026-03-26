@@ -1,6 +1,6 @@
 {
     "name": "OPIS Python Scraper",
-    "image": "mcr.microsoft.com/devcontainers/python:3.11",
+    "image": "mcr.microsoft.com/devcontainers/python:3.14",
     "customizations": {
         "vscode": {
             "settings": {
@@ -39,6 +39,6 @@
             ]
         }
     },
-    "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt",
+    "postCreateCommand": "sudo pip install --upgrade pip --root-user-action=ignore && pip install -r requirements.txt -r requirements_dev.txt",
     "remoteUser": "vscode"
 }
