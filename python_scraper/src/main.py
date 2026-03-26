@@ -17,7 +17,8 @@ def main():
     except KeyboardInterrupt:
         logger.warning("Estrazione interrotta manualmente.")
     except Exception as e:
-        logger.error(f"Errore critico durante l'esecuzione: {e}", exc_info=True)
+        logger.error("Errore critico durante l'esecuzione: %s",
+                     e, exc_info=True)
 
 
 if __name__ == "__main__":  # pragma: no cover

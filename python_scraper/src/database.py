@@ -16,7 +16,7 @@ def connect_to_db():
     global _connection
 
     host = os.getenv("DB_HOST", "127.0.0.1")
-    port = int(os.getenv("DB_PORT", 3306))
+    port = int(os.getenv("DB_PORT", "3306"))
     user = os.getenv("DB_USER", "root")
     password = os.getenv("DB_PASSWORD", "")
     database = os.getenv("DB_NAME", "opis_manager")
@@ -26,10 +26,10 @@ def connect_to_db():
             host=host, port=port, user=user, password=password, database=database
         )
         logger.info(
-            f"Connessione al database MySQL '{database}' stabilita con successo."
+            "Connessione al database MySQL '%s' stabilita con successo.", database
         )
     except Error as e:
-        logger.error(f"Errore di connessione a MySQL: {e}")
+        logger.error("Errore di connessione a MySQL: %s", e)
         raise
 
 
@@ -66,7 +66,8 @@ def insert_department(department) -> int:
         query_select = (
             "SELECT id FROM dipartimento WHERE unict_id = %s AND anno_accademico = %s"
         )
-        cursor.execute(query_select, (department.unict_id, department.anno_accademico))
+        cursor.execute(query_select, (department.unict_id,
+                       department.anno_accademico))
 
         result = cursor.fetchone()
         cursor.close()
@@ -74,7 +75,9 @@ def insert_department(department) -> int:
         return int(result[0]) if result else -1  # type: ignore
     except Error as e:
         logger.error(
-            f"Errore DB durante l'inserimento del dipartimento '{department.nome}': {e}"
+            "Errore DB durante l'inserimento del dipartimento '%s': %s",
+            department.nome,
+            e
         )
         return -1
 
@@ -112,7 +115,11 @@ def insert_course(course, dipartimento_internal_id: int) -> int:
 
         return result[0] if result else -1  # type: ignore
     except Error as e:
-        logger.error(f"Errore DB durante l'inserimento del corso '{course.nome}': {e}")
+        logger.error(
+            "Errore DB durante l'inserimento del corso '%s': %s",
+            course.nome,
+            e
+        )
         return -1
 
 
@@ -153,7 +160,9 @@ def insert_insegnamento(insegnamento, corso_internal_id: int) -> int:
 
     except Error as e:
         logger.error(
-            f"Errore DB durante l'inserimento dell'insegnamento '{insegnamento.nome}': {e}"
+            "Errore DB durante l'inserimento dell'insegnamento '%s': %s",
+            insegnamento.nome,
+            e
         )
         return -1
 
@@ -170,7 +179,8 @@ def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int):
         columns = list(first_scheda_dict.keys())
         placeholders = ", ".join(["%s"] * len(columns))
         cols_string = ", ".join(columns)
-        sql = f"INSERT INTO schede_opis ({cols_string}) VALUES ({placeholders})"
+        sql = "INSERT INTO schede_opis (%s) VALUES (%s)" % (
+            cols_string, placeholders)
         val_list = []
 
         for scheda in schede_opis:
@@ -194,5 +204,7 @@ def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int):
 
     except Error as e:
         logger.error(
-            f"Errore DB durante il salvataggio di {len(schede_opis)} schede OPIS: {e}"
+            "Errore DB durante il salvataggio di %d schede OPIS: %s",
+            len(schede_opis),
+            e
         )
