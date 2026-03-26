@@ -5,6 +5,8 @@ import os
 import mysql.connector
 from dotenv import load_dotenv
 from mysql.connector import Error
+from mysql.connector.abstracts import MySQLConnectionAbstract
+from mysql.connector.pooling import PooledMySQLConnection
 
 load_dotenv()
 
@@ -13,7 +15,7 @@ logger = logging.getLogger(__name__)
 _connection = None
 
 
-def get_connection():
+def get_connection() -> MySQLConnectionAbstract | PooledMySQLConnection | None:
     return _connection
 
 
@@ -22,7 +24,7 @@ def set_connection(conn) -> None:
     _connection = conn
 
 
-def connect_to_db():
+def connect_to_db() -> None:
     global _connection
 
     host = os.getenv("DB_HOST", "127.0.0.1")
@@ -43,7 +45,7 @@ def connect_to_db():
         raise
 
 
-def close_connection():
+def close_connection() -> None:
     if _connection and _connection.is_connected():
         _connection.close()
         logger.info("Connessione al database chiusa.")
@@ -170,9 +172,9 @@ def insert_insegnamento(insegnamento, corso_internal_id: int) -> int:
         return -1
 
 
-def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int):
+def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int) -> int:
     if not _connection or not schede_opis:
-        return
+        return -1
 
     try:
         cursor = _connection.cursor()
@@ -201,7 +203,10 @@ def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int):
 
         cursor.executemany(sql, val_list)
         _connection.commit()
+        inserted_rows = cursor.rowcount
         cursor.close()
+
+        return inserted_rows
 
     except Error as e:
         logger.error(
@@ -209,3 +214,4 @@ def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int):
             len(schede_opis),
             e,
         )
+        return -1

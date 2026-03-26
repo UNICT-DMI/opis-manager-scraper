@@ -1,3 +1,4 @@
+from typing import Generator
 from unittest.mock import MagicMock
 
 import mysql.connector
@@ -8,14 +9,14 @@ from src.models import CorsoDiStudi, Dipartimento, Insegnamento, SchedaOpis
 
 
 @pytest.fixture(autouse=True)
-def reset_db_connection():
+def reset_db_connection() -> Generator[None, None, None]:
     database.set_connection(None)
     yield
     database.set_connection(None)
 
 
 @pytest.fixture
-def mock_db_connection(mocker):
+def mock_db_connection(mocker) -> tuple[MagicMock, MagicMock]:
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
 
@@ -28,7 +29,7 @@ def mock_db_connection(mocker):
     return mock_conn, mock_cursor
 
 
-def test_connect_to_db(mocker):
+def test_connect_to_db(mocker) -> None:
     # act
     mock_connect = mocker.patch("src.database.mysql.connector.connect")
     database.connect_to_db()
@@ -38,7 +39,7 @@ def test_connect_to_db(mocker):
     assert database.get_connection() is not None
 
 
-def test_insert_department_success(mock_db_connection):
+def test_insert_department_success(mock_db_connection) -> None:
     mock_conn, mock_cursor = mock_db_connection
     mock_cursor.fetchone.return_value = (99,)
 
@@ -54,7 +55,7 @@ def test_insert_department_success(mock_db_connection):
     mock_cursor.close.assert_called_once()
 
 
-def test_insert_department_failure(mock_db_connection, caplog):
+def test_insert_department_failure(mock_db_connection, caplog) -> None:
     _, mock_cursor = mock_db_connection
     mock_cursor.execute.side_effect = mysql.connector.Error("Errore DB")
     dip = Dipartimento(unict_id=123, nome="Informatica", anno_accademico="2023/2024")
@@ -67,7 +68,7 @@ def test_insert_department_failure(mock_db_connection, caplog):
     assert "Errore DB durante l'inserimento del dipartimento" in caplog.text
 
 
-def test_insert_course(mock_db_connection):
+def test_insert_course(mock_db_connection) -> None:
     mock_conn, mock_cursor = mock_db_connection
     mock_cursor.fetchone.return_value = (42,)
 
@@ -88,7 +89,7 @@ def test_insert_course(mock_db_connection):
     mock_conn.commit.assert_called_once()
 
 
-def test_insert_course_failure(mock_db_connection, caplog):
+def test_insert_course_failure(mock_db_connection, caplog) -> None:
     _, mock_cursor = mock_db_connection
     mock_cursor.execute.side_effect = mysql.connector.Error("Errore DB")
     corso = CorsoDiStudi(
@@ -107,7 +108,7 @@ def test_insert_course_failure(mock_db_connection, caplog):
     assert "Errore DB durante l'inserimento del corso" in caplog.text
 
 
-def test_insert_insegnamento(mock_db_connection):
+def test_insert_insegnamento(mock_db_connection) -> None:
     mock_conn, mock_cursor = mock_db_connection
     mock_cursor.lastrowid = 100
 
@@ -129,7 +130,7 @@ def test_insert_insegnamento(mock_db_connection):
     mock_conn.commit.assert_called_once()
 
 
-def test_insert_insegnamento_failure(mock_db_connection, caplog):
+def test_insert_insegnamento_failure(mock_db_connection, caplog) -> None:
     _, mock_cursor = mock_db_connection
     mock_cursor.execute.side_effect = mysql.connector.Error("Errore DB")
     ins = Insegnamento(
@@ -147,8 +148,9 @@ def test_insert_insegnamento_failure(mock_db_connection, caplog):
     assert "Errore DB durante l'inserimento dell'insegnamento" in caplog.text
 
 
-def test_insert_schede_opis(mock_db_connection):
+def test_insert_schede_opis(mock_db_connection) -> None:
     mock_conn, mock_cursor = mock_db_connection
+    mock_cursor.rowcount = 1
 
     scheda = SchedaOpis(
         anno_accademico="2023/2024",
@@ -165,9 +167,10 @@ def test_insert_schede_opis(mock_db_connection):
     )
 
     # act
-    database.insert_schede_opis([scheda], insegnamento_internal_id=100)
+    result = database.insert_schede_opis([scheda], insegnamento_internal_id=100)
 
     # assert
+    assert result == 1
     mock_cursor.executemany.assert_called_once()
     args, _ = mock_cursor.executemany.call_args
     query_eseguita = args[0]
@@ -181,7 +184,7 @@ def test_insert_schede_opis(mock_db_connection):
     mock_conn.commit.assert_called_once()
 
 
-def test_insert_schede_opis_failure(mock_db_connection, caplog):
+def test_insert_schede_opis_failure(mock_db_connection, caplog) -> None:
     _, mock_cursor = mock_db_connection
     mock_cursor.executemany.side_effect = mysql.connector.Error("Errore DB")
     scheda = SchedaOpis(
@@ -198,12 +201,12 @@ def test_insert_schede_opis_failure(mock_db_connection, caplog):
         sugg_nf=[],
     )
 
-    database.insert_schede_opis([scheda], insegnamento_internal_id=100)
+    assert database.insert_schede_opis([scheda], insegnamento_internal_id=100) == -1
 
     assert "Errore DB durante il salvataggio" in caplog.text
 
 
-def test_connect_to_db_failure(mocker, caplog):
+def test_connect_to_db_failure(mocker, caplog) -> None:
     mock_connect = mocker.patch("src.database.mysql.connector.connect")
     mock_connect.side_effect = mysql.connector.Error("Credenziali errate")
 
@@ -213,7 +216,7 @@ def test_connect_to_db_failure(mocker, caplog):
     assert "Errore di connessione a MySQL" in caplog.text
 
 
-def test_close_connection():
+def test_close_connection() -> None:
     mock_conn = MagicMock()
     mock_conn.is_connected.return_value = True
     database.set_connection(mock_conn)
@@ -223,7 +226,7 @@ def test_close_connection():
     mock_conn.close.assert_called_once()
 
 
-def test_inserts_without_connection(caplog):
+def test_inserts_without_connection(caplog) -> None:
     database.set_connection(None)
     dip = Dipartimento(unict_id=1, nome="Dipartimento", anno_accademico="23/24")
     corso = CorsoDiStudi(
@@ -259,4 +262,4 @@ def test_inserts_without_connection(caplog):
     assert "Database non connesso" in caplog.text
     assert database.insert_course(corso, 1) == -1
     assert database.insert_insegnamento(ins, 1) == -1
-    assert database.insert_schede_opis([scheda], 1) is None
+    assert database.insert_schede_opis([scheda], 1) == -1

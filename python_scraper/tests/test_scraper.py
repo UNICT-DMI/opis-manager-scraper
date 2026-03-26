@@ -142,7 +142,7 @@ from src.scraper import assign_channels
         "multiplo_con_moduli",
     ],
 )
-def test_assign_channels(input_activities, expected_canali):
+def test_assign_channels(input_activities, expected_canali) -> None:
     # act
     result = assign_channels(input_activities)
 
