@@ -1,5 +1,5 @@
 import re
-from typing import Tuple, Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def parse_course_name(full_name: Optional[str]) -> Tuple[str, str]:
@@ -86,6 +86,109 @@ def _aggiorna_statistica_json(
             record[campo][lbl] = record[campo].get(lbl, 0) + int(values[i])
 
 
+def _process_cluster_data(cluster: Dict[str, Any], record: Dict[str, Any]) -> None:
+    cluster_info = cluster.get("cluster", {})
+    cluster_name = cluster_info.get("Text", "").lower()
+    is_nf = "non frequentanti" in cluster_name
+
+    domande_flat = [0] * 60
+    totale_schede = 0
+    questions = cluster.get("questions", [])
+
+    for q in questions:
+        q_code_str = q.get("questionCode")
+        if not q_code_str:
+            continue
+
+        try:
+            q_idx = int(q_code_str) - 1
+        except ValueError:
+            continue
+
+        if q_idx < 0 or q_idx >= 12:
+            continue
+
+        subs = q.get("submissions", 0)
+        totale_schede = max(totale_schede, subs)
+
+        base_offset = q_idx * 5
+        for ans in q.get("answers", []):
+            a_code = ans.get("answerCode")
+            count = ans.get("count", 0)
+
+            offset = -1
+            match a_code:
+                case "R1":
+                    offset = 0
+                case "R2":
+                    offset = 1
+                case "R3":
+                    offset = 2
+                case "R4":
+                    offset = 3
+                case "R5":
+                    offset = 4
+
+            if offset >= 0:
+                domande_flat[base_offset + offset] = count
+
+    if is_nf:
+        record["totale_schede_nf"] = totale_schede
+        record["domande_nf"] = domande_flat
+    else:
+        record["totale_schede"] = totale_schede
+        record["domande"] = domande_flat
+
+
+def _process_graph_pie(
+    pie: Dict[str, Any], is_nf_graph: bool, record: Dict[str, Any]
+) -> None:
+    datasets = pie.get("datasets", [])
+    if not datasets:
+        return
+
+    graph_label = datasets[0].get("label", "").lower()
+    labels = pie.get("labels", [])
+    values = datasets[0].get("data", [])
+
+    match graph_label:
+        case lbl if any(k in lbl for k in ["età", "eta'", "age"]):
+            _aggiorna_statistica_json(record, "eta", labels, values)
+
+        case lbl if "numero medio di studenti" in lbl:
+            _aggiorna_statistica_json(record, "num_studenti", labels, values)
+
+        case lbl if any(k in lbl for k in ["studio autonomo", "giornalmente"]):
+            _aggiorna_statistica_json(record, "studio_gg", labels, values)
+
+        case lbl if "ore di studio, in totale" in lbl:
+            _aggiorna_statistica_json(record, "studio_tot", labels, values)
+
+        case lbl if any(k in lbl for k in ["domicilio", "tempo impiega"]):
+            _aggiorna_statistica_json(record, "ragg_uni", labels, values)
+
+        case lbl if any(k in lbl for k in ["sesso", "genere", "gender"]):
+            femmine_count = 0
+            for i, lbl_sesso in enumerate(labels):
+                if lbl_sesso.lower() in ["f", "femmina", "femmine"] and i < len(values):
+                    femmine_count += int(values[i])
+
+            if is_nf_graph:
+                record["femmine_nf"] = (record.get("femmine_nf") or 0) + femmine_count
+            else:
+                record["femmine"] = (record.get("femmine") or 0) + femmine_count
+
+        case lbl if any(k in lbl for k in ["fuori corso", "iscrizione"]):
+            fc_count = 0
+            for i, lbl_fc in enumerate(labels):
+                if "fuori corso" in lbl_fc.lower() and i < len(values):
+                    fc_count += int(values[i])
+            record["fc"] += fc_count
+
+        case _:
+            pass
+
+
 def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     clusters = json_data.get("clusterData", [])
     graphs = json_data.get("graphPieList", [])
@@ -112,115 +215,13 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     }
 
     for cluster in clusters:
-        cluster_info = cluster.get("cluster", {})
-        cluster_name = cluster_info.get("Text", "").lower()
-        is_nf = "non frequentanti" in cluster_name
-
-        domande_flat = [0] * 60
-        totale_schede = 0
-        questions = cluster.get("questions", [])
-
-        for q in questions:
-            q_code_str = q.get("questionCode")
-            if not q_code_str:
-                continue
-
-            try:
-                q_idx = int(q_code_str) - 1
-            except ValueError:
-                continue
-
-            if q_idx < 0 or q_idx >= 12:
-                continue
-
-            subs = q.get("submissions", 0)
-            totale_schede = max(totale_schede, subs)
-
-            base_offset = q_idx * 5
-            for ans in q.get("answers", []):
-                a_code = ans.get("answerCode")
-                count = ans.get("count", 0)
-
-                offset = -1
-                match a_code:
-                    case "R1":
-                        offset = 0
-                    case "R2":
-                        offset = 1
-                    case "R3":
-                        offset = 2
-                    case "R4":
-                        offset = 3
-                    case "R5":
-                        offset = 4
-
-                if offset >= 0:
-                    domande_flat[base_offset + offset] = count
-
-        if is_nf:
-            record["totale_schede_nf"] = totale_schede
-            record["domande_nf"] = domande_flat
-        else:
-            record["totale_schede"] = totale_schede
-            record["domande"] = domande_flat
+        _process_cluster_data(cluster, record)
 
     for graph in graphs:
         is_nf_graph = "non frequentanti" in graph.get("name", "").lower()
 
         for pie in graph.get("dataPie", []):
-            datasets = pie.get("datasets", [])
-            if not datasets:
-                continue
-
-            graph_label = datasets[0].get("label", "").lower()
-            labels = pie.get("labels", [])
-            values = datasets[0].get("data", [])
-
-            match graph_label:
-                case lbl if any(k in lbl for k in ["età", "eta'", "age"]):
-                    _aggiorna_statistica_json(record, "eta", labels, values)
-
-                case lbl if "numero medio di studenti" in lbl:
-                    _aggiorna_statistica_json(
-                        record, "num_studenti", labels, values)
-
-                case lbl if any(k in lbl for k in ["studio autonomo", "giornalmente"]):
-                    _aggiorna_statistica_json(
-                        record, "studio_gg", labels, values)
-
-                case lbl if "ore di studio, in totale" in lbl:
-                    _aggiorna_statistica_json(
-                        record, "studio_tot", labels, values)
-
-                case lbl if any(k in lbl for k in ["domicilio", "tempo impiega"]):
-                    _aggiorna_statistica_json(
-                        record, "ragg_uni", labels, values)
-
-                case lbl if any(k in lbl for k in ["sesso", "genere", "gender"]):
-                    femmine_count = 0
-                    for i, lbl_sesso in enumerate(labels):
-                        if lbl_sesso.lower() in ["f", "femmina", "femmine"] and i < len(
-                            values
-                        ):
-                            femmine_count += int(values[i])
-
-                    if is_nf_graph:
-                        record["femmine_nf"] = (
-                            record.get("femmine_nf") or 0
-                        ) + femmine_count
-                    else:
-                        record["femmine"] = (record.get(
-                            "femmine") or 0) + femmine_count
-
-                case lbl if any(k in lbl for k in ["fuori corso", "iscrizione"]):
-                    fc_count = 0
-                    for i, lbl_fc in enumerate(labels):
-                        if "fuori corso" in lbl_fc.lower() and i < len(values):
-                            fc_count += int(values[i])
-                    record["fc"] += fc_count
-
-                case _:
-                    pass
+            _process_graph_pie(pie, is_nf_graph, record)
 
     for campo in ["eta", "num_studenti", "studio_gg", "studio_tot", "ragg_uni"]:
         if not record[campo]:
