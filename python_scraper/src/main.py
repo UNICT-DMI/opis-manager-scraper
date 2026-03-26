@@ -1,4 +1,7 @@
 import logging
+
+import mysql.connector
+
 from src.scraper import run_scraper
 
 logging.basicConfig(
@@ -16,9 +19,10 @@ def main():
 
     except KeyboardInterrupt:
         logger.warning("Estrazione interrotta manualmente.")
-    except Exception as e:
-        logger.error("Errore critico durante l'esecuzione: %s",
-                     e, exc_info=True)
+    except RuntimeError as e:
+        logger.error("Errore critico durante l'esecuzione: %s", e, exc_info=True)
+    except mysql.connector.Error as e:
+        logger.error("Errore di database: %s", e, exc_info=True)
 
 
 if __name__ == "__main__":  # pragma: no cover

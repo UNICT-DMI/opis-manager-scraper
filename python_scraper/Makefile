@@ -11,5 +11,5 @@ lint:
 	@echo "=== Esecuzione Black ==="
 	black --check --diff $$(git ls-files '*.py')
 	@echo "=== Esecuzione Isort ==="
-	isort --check-only --diff $$(git ls-files '*.py')
+	isort --profile black --check-only --diff $$(git ls-files '*.py')
 	@echo "🎉 Tutti i controlli sono passati!"

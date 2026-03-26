@@ -33,6 +33,7 @@ ENV/
 
 .coverage
 .pytest_cache/
+.mypy_cache/
 calc_cov/
 
 .env

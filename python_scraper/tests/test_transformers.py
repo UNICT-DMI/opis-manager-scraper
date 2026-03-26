@@ -1,5 +1,7 @@
-import pytest
 from typing import Any, Optional
+
+import pytest
+
 from src.transformers import (
     parse_course_name,
     parse_insegnamento_data,
@@ -202,6 +204,13 @@ def mock_opis_json() -> dict[str, Any]:
                             {"answerCode": "R5", "count": 7},
                         ],
                     },
+                    {
+                        "questionCode": "3",
+                        "submissions": 6,
+                        "answers": [
+                            {"answerCode": "R2", "count": 6},
+                        ],
+                    },
                     {"questionCode": None, "submissions": 1, "answers": []},
                     {"questionCode": "ABC", "submissions": 1, "answers": []},
                     {"questionCode": "15", "submissions": 1, "answers": []},
@@ -298,22 +307,31 @@ def test_parse_scheda_opis_data(mock_opis_json: dict[str, Any]) -> None:
     # assert
     assert len(results) == 1
     scheda = results[0]
-    assert scheda["totale_schede"] == 12
-    assert len(scheda["domande"]) == 60
-    assert scheda["domande"][0] == 2
-    assert scheda["domande"][3] == 8
-    assert scheda["domande"][7] == 5
-    assert scheda["domande"][9] == 7
-    assert scheda["eta"] is not None
-    assert isinstance(scheda["eta"], dict)
-    assert scheda["eta"]["20-21"] == 5
-    assert scheda["eta"]["22-23"] == 3
-    assert scheda["eta"]["99"] == 100
-    assert scheda["femmine"] == 15
-    assert scheda["num_studenti"] is not None
-    assert scheda["num_studenti"]["Fino a 25"] == 6
-    assert scheda["fc"] == 4
-    assert scheda["ragg_uni"]["Da 1 a 30 minuti"] == 20
-    assert scheda["studio_gg"]["2 ore"] == 8
-    assert scheda["femmine_nf"] == 5
-    assert scheda["studio_tot"] is None
+    domande = scheda.get("domande")
+    assert domande is not None
+    assert scheda.get("totale_schede") == 12
+    assert len(domande) == 60
+    assert domande[0] == 2
+    assert domande[3] == 8
+    assert domande[7] == 5
+    assert domande[9] == 7
+    assert domande[11] == 6
+    eta = scheda.get("eta")
+    assert eta is not None
+    assert isinstance(eta, dict)
+    assert eta.get("20-21") == 5
+    assert eta.get("22-23") == 3
+    assert eta.get("99") == 100
+    assert scheda.get("femmine") == 15
+    num_studenti = scheda.get("num_studenti")
+    assert num_studenti is not None
+    assert num_studenti.get("Fino a 25") == 6
+    assert scheda.get("fc") == 4
+    ragg_uni = scheda.get("ragg_uni")
+    assert ragg_uni is not None
+    assert ragg_uni.get("Da 1 a 30 minuti") == 20
+    studio_gg = scheda.get("studio_gg")
+    assert studio_gg is not None
+    assert studio_gg.get("2 ore") == 8
+    assert scheda.get("femmine_nf") == 5
+    assert scheda.get("studio_tot") is None

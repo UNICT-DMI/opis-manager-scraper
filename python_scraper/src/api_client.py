@@ -1,21 +1,26 @@
-import requests
 import logging
 from typing import List
-from src.models import Dipartimento, CorsoDiStudi, Insegnamento, SchedaOpis
+
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+from src.models import CorsoDiStudi, Dipartimento, Insegnamento, SchedaOpis
 from src.transformers import (
     parse_course_name,
     parse_insegnamento_data,
     parse_scheda_opis_data,
 )
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://public.smartedu.unict.it/EnqaDataViewer"
 HEADERS = {
     "Content-Type": "application/json",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
 }
 
 TIMEOUT = 120
@@ -36,7 +41,7 @@ session.mount("http://", adapter)
 
 
 def get_departments(year: int) -> List[Dipartimento]:
-    url = "%s/getDepartments" % BASE_URL
+    url = f"{BASE_URL}/getDepartments"
 
     payload = {"surveys": "", "academicYear": year}
 
@@ -66,16 +71,14 @@ def get_departments(year: int) -> List[Dipartimento]:
 
     except requests.exceptions.RequestException as e:
         logger.error(
-            "Errore durante la richiesta API dipartimenti per l'anno %d: %s",
-            year,
-            e
+            "Errore durante la richiesta API dipartimenti per l'anno %d: %s", year, e
         )
         return []
 
 
 def get_courses(year: int, department_code: int) -> List[CorsoDiStudi]:
 
-    url = "%s/getCourses" % BASE_URL
+    url = f"{BASE_URL}/getCourses"
 
     payload = {
         "surveys": "",
@@ -114,17 +117,14 @@ def get_courses(year: int, department_code: int) -> List[CorsoDiStudi]:
 
     except requests.exceptions.RequestException as e:
         logger.error(
-            "Errore API Corsi (Dip: %d, Anno: %d): %s",
-            department_code,
-            year,
-            e
+            "Errore API Corsi (Dip: %d, Anno: %d): %s", department_code, year, e
         )
         return []
 
 
 def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnamento]:
 
-    url = "%s/getActivities" % BASE_URL
+    url = f"{BASE_URL}/getActivities"
 
     payload = {
         "surveys": "",
@@ -151,8 +151,8 @@ def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnam
                 logger.warning(
                     "      [SKIP MATERIA] '%s' ignorata. "
                     "Codice GOMP vuoto o alfanumerico: %s",
-                    item.get('activityName'),
-                    item.get('activityCode')
+                    item.get("activityName"),
+                    item.get("activityCode"),
                 )
                 continue
 
@@ -177,7 +177,7 @@ def get_activities(year: int, dept_code: int, course_code: str) -> List[Insegnam
             course_code,
             dept_code,
             year,
-            e
+            e,
         )
         return []
 
@@ -186,7 +186,7 @@ def get_questions(
     year: int, dept_code: int, course_code: str, activity_code: int, professor_tax: str
 ) -> List[SchedaOpis]:
 
-    url = "%s/getQuestions" % BASE_URL
+    url = f"{BASE_URL}/getQuestions"
 
     payload = {
         "surveys": "",
@@ -209,7 +209,7 @@ def get_questions(
             course_code,
             dept_code,
             year,
-            e
+            e,
         )
         return []
 

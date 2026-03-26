@@ -1,24 +1,70 @@
+from typing import Any, Dict, List, NamedTuple
+
 import pytest
-from pytest_mock import MockerFixture
-from typing import Dict, Any, List
-from src.api_client import get_courses, get_departments, get_activities, get_questions
-from src.models import CorsoDiStudi, Dipartimento, Insegnamento, SchedaOpis
 import requests.exceptions
+from pytest_mock import MockerFixture
+
+from src.api_client import get_activities, get_courses, get_departments, get_questions
+from src.models import CorsoDiStudi, Dipartimento, Insegnamento, SchedaOpis
+
+
+class GetDepartmentsCase(NamedTuple):
+    year: int
+    expected_payload_subset: Dict[str, Any]
+    mock_response_data: List[Dict[str, Any]]
+    expected_result: List[Dipartimento]
+
+
+class GetCoursesCase(NamedTuple):
+    year: int
+    dept_code: int
+    expected_payload_subset: Dict[str, Any]
+    mock_response_data: List[Dict[str, Any]]
+    expected_result: List[CorsoDiStudi]
+
+
+class GetActivitiesCase(NamedTuple):
+    year: int
+    dept_code: int
+    course_code: str
+    expected_payload_subset: Dict[str, Any]
+    mock_response_data: List[Dict[str, Any]]
+    expected_result: List[Insegnamento]
+
+
+class GetQuestionsCase(NamedTuple):
+    year: int
+    dept_code: int
+    course_code: str
+    activity_code: int
+    prof_tax: str
+    mock_response: Dict[str, Any]
+    expected_payload: Dict[str, Any]
+    expected_result: List[SchedaOpis]
+
+
+class GetQuestionsFailureCase(NamedTuple):
+    year: int
+    dept_code: int
+    course_code: str
+    activity_code: int
+    prof_tax: str
+
 
 # TESTS get_departments
 
 
 @pytest.mark.parametrize(
-    "year, expected_payload_subset, mock_response_data, expected_result",
+    "case",
     [
-        (
-            2024,
-            {"surveys": "", "academicYear": 2024},
-            [
+        GetDepartmentsCase(
+            year=2024,
+            expected_payload_subset={"surveys": "", "academicYear": 2024},
+            mock_response_data=[
                 {"code": "1001", "name": "Dipartimento di Matematica"},
                 {"code": None, "name": "TOTALE"},
             ],
-            [
+            expected_result=[
                 Dipartimento(
                     unict_id=1001,
                     nome="Dipartimento di Matematica",
@@ -26,20 +72,20 @@ import requests.exceptions
                 )
             ],
         ),
-        (
-            2024,
-            {"surveys": "", "academicYear": 2024},
-            [{"code": None, "name": "TOTALE"}],
-            [],
+        GetDepartmentsCase(
+            year=2024,
+            expected_payload_subset={"surveys": "", "academicYear": 2024},
+            mock_response_data=[{"code": None, "name": "TOTALE"}],
+            expected_result=[],
         ),
-        (
-            2021,
-            {"surveys": "", "academicYear": 2021},
-            [
+        GetDepartmentsCase(
+            year=2021,
+            expected_payload_subset={"surveys": "", "academicYear": 2021},
+            mock_response_data=[
                 {"code": "1002", "name": "Dipartimento di Informatica"},
                 {"code": None, "name": "TOTALE"},
             ],
-            [
+            expected_result=[
                 Dipartimento(
                     unict_id=1002,
                     nome="Dipartimento di Informatica",
@@ -49,31 +95,25 @@ import requests.exceptions
         ),
     ],
 )
-def test_get_departments(
-    mocker: MockerFixture,
-    year: int,
-    expected_payload_subset: Dict[str, Any],
-    mock_response_data: List[Dict[str, Any]],
-    expected_result: List[Dipartimento],
-) -> None:
+def test_get_departments(mocker: MockerFixture, case: GetDepartmentsCase) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getDepartments"
     mock_post = mocker.patch("src.api_client.session.post")
     mock_post.return_value.status_code = 200
-    mock_post.return_value.json.return_value = {"data": mock_response_data}
+    mock_post.return_value.json.return_value = {"data": case.mock_response_data}
 
     # act
-    result = get_departments(year)
+    result = get_departments(case.year)
 
     # assert
-    assert len(result) == len(expected_result)
+    assert len(result) == len(case.expected_result)
     assert all(isinstance(r, Dipartimento) for r in result)
-    assert result == expected_result
+    assert result == case.expected_result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
     actual_payload = kwargs["json"]
-    for key, value in expected_payload_subset.items():
+    for key, value in case.expected_payload_subset.items():
         assert actual_payload[key] == value
 
 
@@ -88,7 +128,7 @@ def test_get_departments_api_failure(mocker: MockerFixture, year: int) -> None:
     result = get_departments(year)
 
     # assert
-    assert result == []
+    assert not result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
@@ -98,18 +138,24 @@ def test_get_departments_api_failure(mocker: MockerFixture, year: int) -> None:
 
 
 # TESTS get_courses
+
+
 @pytest.mark.parametrize(
-    "year, dept_code, expected_payload_subset, mock_response_data, expected_result",
+    "case",
     [
-        (
-            2024,
-            12345,
-            {"surveys": "", "academicYear": 2024, "departmentCode": "12345"},
-            [
+        GetCoursesCase(
+            year=2024,
+            dept_code=12345,
+            expected_payload_subset={
+                "surveys": "",
+                "academicYear": 2024,
+                "departmentCode": "12345",
+            },
+            mock_response_data=[
                 {"code": "M12", "name": "Matematica LM-40"},
                 {"code": None, "name": "TOTALE"},
             ],
-            [
+            expected_result=[
                 CorsoDiStudi(
                     unict_id="M12",
                     nome="Matematica",
@@ -119,19 +165,30 @@ def test_get_departments_api_failure(mocker: MockerFixture, year: int) -> None:
                 )
             ],
         ),
-        (
-            2024,
-            12345,
-            {"surveys": "", "academicYear": 2024, "departmentCode": "12345"},
-            [{"code": None, "name": "TOTALE"}],
-            [],
+        GetCoursesCase(
+            year=2024,
+            dept_code=12345,
+            expected_payload_subset={
+                "surveys": "",
+                "academicYear": 2024,
+                "departmentCode": "12345",
+            },
+            mock_response_data=[{"code": None, "name": "TOTALE"}],
+            expected_result=[],
         ),
-        (
-            2021,
-            98765,
-            {"surveys": "", "academicYear": 2021, "departmentCode": "98765"},
-            [{"code": "F34", "name": "Fisica L-30"}, {"code": None, "name": "TOTALE"}],
-            [
+        GetCoursesCase(
+            year=2021,
+            dept_code=98765,
+            expected_payload_subset={
+                "surveys": "",
+                "academicYear": 2021,
+                "departmentCode": "98765",
+            },
+            mock_response_data=[
+                {"code": "F34", "name": "Fisica L-30"},
+                {"code": None, "name": "TOTALE"},
+            ],
+            expected_result=[
                 CorsoDiStudi(
                     unict_id="F34",
                     nome="Fisica",
@@ -143,33 +200,25 @@ def test_get_departments_api_failure(mocker: MockerFixture, year: int) -> None:
         ),
     ],
 )
-def test_get_courses(
-    mocker: MockerFixture,
-    year: int,
-    dept_code: int,
-    expected_payload_subset: Dict[str, Any],
-    mock_response_data: List[Dict[str, Any]],
-    expected_result: List[CorsoDiStudi],
-) -> None:
+def test_get_courses(mocker: MockerFixture, case: GetCoursesCase) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getCourses"
-
     mock_post = mocker.patch("src.api_client.session.post")
     mock_post.return_value.status_code = 200
-    mock_post.return_value.json.return_value = {"data": mock_response_data}
+    mock_post.return_value.json.return_value = {"data": case.mock_response_data}
 
     # act
-    result = get_courses(year, dept_code)
+    result = get_courses(case.year, case.dept_code)
 
     # assert
-    assert len(result) == len(expected_result)
+    assert len(result) == len(case.expected_result)
     assert all(isinstance(c, CorsoDiStudi) for c in result)
-    assert result == expected_result
+    assert result == case.expected_result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
     actual_payload = kwargs["json"]
-    for key, value in expected_payload_subset.items():
+    for key, value in case.expected_payload_subset.items():
         assert actual_payload[key] == value
 
 
@@ -193,7 +242,7 @@ def test_get_courses_api_failure(
     result = get_courses(year, dept_code)
 
     # assert
-    assert result == []
+    assert not result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
@@ -205,19 +254,19 @@ def test_get_courses_api_failure(
 
 # TESTS get_activities
 @pytest.mark.parametrize(
-    "year, dept_code, course_code, expected_payload_subset, mock_response_data, expected_result",
+    "case",
     [
-        (
-            2023,
-            190141,
-            "W82",
-            {
+        GetActivitiesCase(
+            year=2023,
+            dept_code=190141,
+            course_code="W82",
+            expected_payload_subset={
                 "surveys": "",
                 "academicYear": 2023,
                 "departmentCode": "190141",
                 "courseCode": "W82",
             },
-            [
+            mock_response_data=[
                 {
                     "activityCode": "1001829",
                     "activityName": "ULTERIORI ATTIVITA'",
@@ -237,7 +286,7 @@ def test_get_courses_api_failure(
                 },
                 {"activityCode": None, "activityName": "TOTALE"},
             ],
-            [
+            expected_result=[
                 Insegnamento(
                     codice_gomp=1001829,
                     id_cds="W82",
@@ -257,34 +306,25 @@ def test_get_courses_api_failure(
         )
     ],
 )
-def test_get_activities(
-    mocker: MockerFixture,
-    year: int,
-    dept_code: int,
-    course_code: str,
-    expected_payload_subset: Dict[str, Any],
-    mock_response_data: List[Dict[str, Any]],
-    expected_result: List[Insegnamento],
-) -> None:
+def test_get_activities(mocker: MockerFixture, case: GetActivitiesCase) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getActivities"
-
     mock_post = mocker.patch("src.api_client.session.post")
     mock_post.return_value.status_code = 200
-    mock_post.return_value.json.return_value = {"data": mock_response_data}
+    mock_post.return_value.json.return_value = {"data": case.mock_response_data}
 
     # act
-    result = get_activities(year, dept_code, course_code)
+    result = get_activities(case.year, case.dept_code, case.course_code)
 
     # assert
-    assert len(result) == len(expected_result)
+    assert len(result) == len(case.expected_result)
     assert all(isinstance(a, Insegnamento) for a in result)
-    assert result == expected_result
+    assert result == case.expected_result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
     actual_payload = kwargs["json"]
-    for key, value in expected_payload_subset.items():
+    for key, value in case.expected_payload_subset.items():
         assert actual_payload[key] == value
 
 
@@ -307,7 +347,7 @@ def test_get_activities_api_failure(
     result = get_activities(year, dept_code, course_code)
 
     # assert
-    assert result == []
+    assert not result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
@@ -320,16 +360,16 @@ def test_get_activities_api_failure(
 
 # TESTS get_questions
 @pytest.mark.parametrize(
-    "year, dept_code, course_code, activity_code, prof_tax, mock_response, expected_payload, expected_result",
+    "case",
     [
         # CASO 1: Successo
-        (
-            2023,
-            190141,
-            "W82",
-            1014456,
-            "PROFCF123",
-            {
+        GetQuestionsCase(
+            year=2023,
+            dept_code=190141,
+            course_code="W82",
+            activity_code=1014456,
+            prof_tax="PROFCF123",
+            mock_response={
                 "clusterData": [
                     {
                         "cluster": {"Text": "Test Cluster"},
@@ -340,7 +380,7 @@ def test_get_activities_api_failure(
                 ],
                 "graphPieList": [],
             },
-            {
+            expected_payload={
                 "surveys": "",
                 "academicYear": 2023,
                 "departmentCode": "190141",
@@ -349,7 +389,7 @@ def test_get_activities_api_failure(
                 "partCode": "null",
                 "professor": "PROFCF123",
             },
-            [
+            expected_result=[
                 SchedaOpis(
                     anno_accademico="2023/2024",
                     id_insegnamento=1014456,
@@ -366,14 +406,14 @@ def test_get_activities_api_failure(
             ],
         ),
         # CASO 2: Nessun dato trovato
-        (
-            2023,
-            190141,
-            "W82",
-            9999999,
-            "",
-            {"clusterData": [], "graphPieList": []},
-            {
+        GetQuestionsCase(
+            year=2023,
+            dept_code=190141,
+            course_code="W82",
+            activity_code=9999999,
+            prof_tax="",
+            mock_response={"clusterData": [], "graphPieList": []},
+            expected_payload={
                 "surveys": "",
                 "academicYear": 2023,
                 "departmentCode": "190141",
@@ -382,11 +422,11 @@ def test_get_activities_api_failure(
                 "partCode": "null",
                 "professor": "",
             },
-            [
+            expected_result=[
                 SchedaOpis(
                     anno_accademico="2023/2024",
                     id_insegnamento=9999999,
-                    totale_schede=0,  # Nessuna scheda
+                    totale_schede=0,
                     totale_schede_nf=0,
                     fc=0,
                     inatt_nf=0,
@@ -400,71 +440,58 @@ def test_get_activities_api_failure(
         ),
     ],
 )
-def test_get_questions(
-    mocker: MockerFixture,
-    year: int,
-    dept_code: int,
-    course_code: str,
-    activity_code: int,
-    prof_tax: str,
-    mock_response: Dict[str, Any],
-    expected_payload: Dict[str, Any],
-    expected_result: List[SchedaOpis],
-) -> None:
-    # arange
+def test_get_questions(mocker: MockerFixture, case: GetQuestionsCase) -> None:
+    # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getQuestions"
     mock_post = mocker.patch("src.api_client.session.post")
     mock_post.return_value.status_code = 200
-    mock_post.return_value.json.return_value = mock_response
+    mock_post.return_value.json.return_value = case.mock_response
 
     # act
-    result = get_questions(year, dept_code, course_code, activity_code, prof_tax)
+    result = get_questions(
+        case.year, case.dept_code, case.course_code, case.activity_code, case.prof_tax
+    )
 
     # assert
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
-    assert kwargs["json"] == expected_payload
-    assert result == expected_result
+    assert kwargs["json"] == case.expected_payload
+    assert result == case.expected_result
 
 
 @pytest.mark.parametrize(
-    "year, dept_code, course_code, activity_code, prof_tax",
+    "case",
     [
-        (2024, 12345, "M12", 987654, "PROFCF1"),
-        (2023, 67890, "F34", 112233, "PROFCF2"),
+        GetQuestionsFailureCase(2024, 12345, "M12", 987654, "PROFCF1"),
+        GetQuestionsFailureCase(2023, 67890, "F34", 112233, "PROFCF2"),
     ],
 )
 def test_get_questions_failure(
-    mocker: MockerFixture,
-    year: int,
-    dept_code: int,
-    course_code: str,
-    activity_code: int,
-    prof_tax: str,
+    mocker: MockerFixture, case: GetQuestionsFailureCase
 ) -> None:
     # arrange
     expected_url = "https://public.smartedu.unict.it/EnqaDataViewer/getQuestions"
     mock_post = mocker.patch("src.api_client.session.post")
 
-    import requests
-
     mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
     # act
-    result = get_questions(year, dept_code, course_code, activity_code, prof_tax)
+    result = get_questions(
+        case.year, case.dept_code, case.course_code, case.activity_code, case.prof_tax
+    )
 
     # assert
-    assert result == []
+    assert not result
     mock_post.assert_called_once()
 
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
 
     actual_payload = kwargs["json"]
-    assert actual_payload["academicYear"] == year
-    assert actual_payload["departmentCode"] == str(dept_code)
-    assert actual_payload["courseCode"] == course_code
-    assert actual_payload["activityCode"] == str(activity_code)
-    assert actual_payload["professor"] == prof_tax
+    assert actual_payload["academicYear"] == case.year
+    assert actual_payload["departmentCode"] == str(case.dept_code)
+    assert actual_payload["courseCode"] == case.course_code
+    assert actual_payload["activityCode"] == str(case.activity_code)
+    assert actual_payload["professor"] == case.prof_tax
     assert actual_payload["surveys"] == ""

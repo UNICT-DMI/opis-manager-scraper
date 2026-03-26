@@ -1,20 +1,23 @@
-from typing import List
 import logging
-import time
+import os
 import random
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from src.api_client import get_departments, get_courses, get_activities, get_questions
-from src.models import Insegnamento
+from typing import List
+
+import mysql.connector
+from dotenv import load_dotenv
+
+from src.api_client import get_activities, get_courses, get_departments, get_questions
 from src.database import (
-    connect_to_db,
     close_connection,
-    insert_department,
+    connect_to_db,
     insert_course,
+    insert_department,
     insert_insegnamento,
     insert_schede_opis,
 )
-from dotenv import load_dotenv
-import os
+from src.models import CorsoDiStudi, Dipartimento, Insegnamento, SchedaOpis
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -30,13 +33,13 @@ DEBUG_NUM_DEPARTMENTS = int(os.getenv("DEBUG_NUM_DEPARTMENTS", "1"))
 
 
 def assign_channels(activities: List[Insegnamento]) -> List[Insegnamento]:
-    grouped_activities = {}
+    grouped_activities: dict[str, list[Insegnamento]] = {}
 
     for activity in activities:
         grouped_activities.setdefault(activity.nome, []).append(activity)
 
     for _, group in grouped_activities.items():
-        channel_content = {}
+        channel_content: dict[int, set[str]] = {}
         for activity in group:
             current_module = (
                 activity.nome_modulo if activity.nome_modulo else "MODULO_UNICO"
@@ -61,11 +64,12 @@ def assign_channels(activities: List[Insegnamento]) -> List[Insegnamento]:
     return activities
 
 
-def process_activity(year: int, dept_code: int, course_code: str, activity):
+def process_activity(
+    year: int, dept_code: int, course_code: str, activity: Insegnamento
+) -> tuple[Insegnamento, List[SchedaOpis]]:
     if not activity.professor_tax:
-        logger.warning(
-            "      [SKIP] %s: codice docente mancante.", activity.nome)
-        return
+        logger.warning("      [SKIP] %s: codice docente mancante.", activity.nome)
+        return activity, []
 
     logger.info("      [FETCH] Chiamata in corso per: %s...", activity.nome)
 
@@ -76,8 +80,7 @@ def process_activity(year: int, dept_code: int, course_code: str, activity):
 
     if schede_opis:
         logger.info(
-            "      [OK] Scaricate %d schede per %s.", len(
-                schede_opis), activity.nome
+            "      [OK] Scaricate %d schede per %s.", len(schede_opis), activity.nome
         )
     else:
         logger.info("      [VUOTO] Nessuna scheda per %s.", activity.nome)
@@ -85,16 +88,21 @@ def process_activity(year: int, dept_code: int, course_code: str, activity):
     return activity, schede_opis
 
 
-def process_course(year: int, dept_code: int, course, dip_internal_id: int):
+def process_course(
+    year: int, dept_code: int, course: CorsoDiStudi, dip_internal_id: int
+) -> None:
     corso_internal_id = insert_course(course, dip_internal_id)
     if corso_internal_id == -1:
         logger.error(
             "      [ERRORE DB] Impossibile salvare il corso %s. Salto materie.",
-            course.nome
+            course.nome,
         )
         return
     logger.info(
-        "  > Analisi Corso: %s (%s) (ID DB: %d)", course.nome, course.unict_id, corso_internal_id
+        "  > Analisi Corso: %s (%s) (ID DB: %d)",
+        course.nome,
+        course.unict_id,
+        corso_internal_id,
     )
 
     activities = get_activities(year, dept_code, course.unict_id)
@@ -103,7 +111,8 @@ def process_course(year: int, dept_code: int, course, dip_internal_id: int):
     if not activities:
         logger.info(
             "      [SKIP CORSO] Nessuna materia trovata per %s nell'anno %d.",
-            course.unict_id, year
+            course.unict_id,
+            year,
         )
         return
 
@@ -132,15 +141,15 @@ def process_course(year: int, dept_code: int, course, dip_internal_id: int):
                     )
 
                     if insegnamento_internal_id != -1 and schede_opis:
-                        insert_schede_opis(
-                            schede_opis, insegnamento_internal_id)
+                        insert_schede_opis(schede_opis, insegnamento_internal_id)
 
-            except Exception as e:
-                logger.error(
-                    "Errore inatteso durante l'analisi di una materia: %s", e)
+            except RuntimeError as e:
+                logger.error("Errore inatteso durante l'analisi di una materia: %s", e)
+            except mysql.connector.Error as e:
+                logger.error("Errore di database: %s", e, exc_info=True)
 
 
-def process_department(year: int, department):
+def process_department(year: int, department: Dipartimento) -> None:
     dip_internal_id = insert_department(department)
     if dip_internal_id == -1:
         logger.error(
@@ -148,7 +157,10 @@ def process_department(year: int, department):
         )
         return
     logger.info(
-        "--- Analisi Dipartimento: %s (%s) (ID DB: %d)---", department.nome, department.unict_id, dip_internal_id
+        "--- Analisi Dipartimento: %s (%s) (ID DB: %d)---",
+        department.nome,
+        department.unict_id,
+        dip_internal_id,
     )
 
     courses = get_courses(year, department.unict_id)
@@ -162,7 +174,7 @@ def process_department(year: int, department):
         process_course(year, department.unict_id, course, dip_internal_id)
 
 
-def run_scraper():
+def run_scraper() -> None:
     logger.info("Avvio estrazione dati OPIS (Anni 2021-2024)...")
 
     connect_to_db()
@@ -170,8 +182,7 @@ def run_scraper():
     try:
         for year in ACCADEMIC_YEARS:
             logger.info("==========================================")
-            logger.info(
-                " INIZIO ELABORAZIONE ANNO ACCADEMICO %d/%d ", year, year + 1)
+            logger.info(" INIZIO ELABORAZIONE ANNO ACCADEMICO %d/%d ", year, year + 1)
             logger.info("==========================================")
             logger.info(
                 "Chiamata API in corso per scaricare i dipartimenti del %d...", year
@@ -185,7 +196,8 @@ def run_scraper():
                 departments = random.sample(departments, campione)
 
             logger.info(
-                "Trovati %d dipartimenti per l'anno %d.", len(departments), year)
+                "Trovati %d dipartimenti per l'anno %d.", len(departments), year
+            )
 
             for department in departments:
                 process_department(year, department)

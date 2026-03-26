@@ -1,6 +1,7 @@
-from src.scraper import assign_channels
-from src.models import Insegnamento
 import pytest
+
+from src.models import Insegnamento
+from src.scraper import assign_channels
 
 
 @pytest.mark.parametrize(

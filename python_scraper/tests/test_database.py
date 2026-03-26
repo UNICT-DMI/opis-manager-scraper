@@ -1,15 +1,17 @@
+from unittest.mock import MagicMock
+
 import mysql.connector
 import pytest
-from unittest.mock import MagicMock
+
 from src import database
-from src.models import Dipartimento, CorsoDiStudi, Insegnamento, SchedaOpis
+from src.models import CorsoDiStudi, Dipartimento, Insegnamento, SchedaOpis
 
 
 @pytest.fixture(autouse=True)
 def reset_db_connection():
-    database._connection = None
+    database.set_connection(None)
     yield
-    database._connection = None
+    database.set_connection(None)
 
 
 @pytest.fixture
@@ -21,7 +23,7 @@ def mock_db_connection(mocker):
 
     mocker.patch("src.database.mysql.connector.connect", return_value=mock_conn)
 
-    database._connection = mock_conn
+    database.set_connection(mock_conn)
 
     return mock_conn, mock_cursor
 
@@ -33,7 +35,7 @@ def test_connect_to_db(mocker):
 
     # assert
     mock_connect.assert_called_once()
-    assert database._connection is not None
+    assert database.get_connection() is not None
 
 
 def test_insert_department_success(mock_db_connection):
@@ -214,7 +216,7 @@ def test_connect_to_db_failure(mocker, caplog):
 def test_close_connection():
     mock_conn = MagicMock()
     mock_conn.is_connected.return_value = True
-    database._connection = mock_conn
+    database.set_connection(mock_conn)
 
     database.close_connection()
 
@@ -222,7 +224,7 @@ def test_close_connection():
 
 
 def test_inserts_without_connection(caplog):
-    database._connection = None
+    database.set_connection(None)
     dip = Dipartimento(unict_id=1, nome="Dipartimento", anno_accademico="23/24")
     corso = CorsoDiStudi(
         unict_id="C1",
