@@ -8,6 +8,8 @@ lint:
 	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 	@echo "=== Esecuzione Mypy ==="
 	mypy $$(git ls-files '*.py')
+	@echo "=== Static type checking pyright ==="
+	pyright $$(git ls-files '*.py')
 	@echo "=== Esecuzione Black ==="
 	black --check --diff $$(git ls-files '*.py')
 	@echo "=== Esecuzione Isort ==="

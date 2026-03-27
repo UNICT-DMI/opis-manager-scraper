@@ -42,17 +42,21 @@ python -m src.main
 ```
 
 ## 4. CI Pipeline: How to keep the build from failing
-This project uses GitHub Actions to enforce code quality. Before making a `git push`, run these three local commands to avoid getting your Pull Request blocked:
+This project uses GitHub Actions to enforce code quality. Before making a `git push`, run these local commands to avoid getting your Pull Request blocked:
 
 1. **Auto-formatting:**
    ```bash
    black src tests
    ```
-2. **Static type checking:**
+2. **Auto-sorting imports:**
    ```bash
-   pyright src tests
+   isort --profile black src tests
    ```
-3. **Running tests (Minimum coverage threshold: 80%):**
+3. **Code Quality & Linting:**
+   ```bash
+   make lint
+   ```
+4. **Running tests (Minimum coverage threshold: 80%):**
    ```bash
    pytest --cov=src --cov-report=term-missing
    ```
