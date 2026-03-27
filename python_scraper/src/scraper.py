@@ -68,8 +68,7 @@ def process_activity(
     year: int, dept_code: int, course_code: str, activity: Insegnamento
 ) -> tuple[Insegnamento, List[SchedaOpis]]:
     if not activity.professor_tax:
-        logger.warning(
-            "      [SKIP] %s: codice docente mancante.", activity.nome)
+        logger.warning("      [SKIP] %s: codice docente mancante.", activity.nome)
         return activity, []
 
     logger.info("      [FETCH] Chiamata in corso per: %s...", activity.nome)
@@ -81,8 +80,7 @@ def process_activity(
 
     if schede_opis:
         logger.info(
-            "      [OK] Scaricate %d schede per %s.", len(
-                schede_opis), activity.nome
+            "      [OK] Scaricate %d schede per %s.", len(schede_opis), activity.nome
         )
     else:
         logger.info("      [VUOTO] Nessuna scheda per %s.", activity.nome)
@@ -143,12 +141,10 @@ def process_course(
                     )
 
                     if insegnamento_internal_id != -1 and schede_opis:
-                        insert_schede_opis(
-                            schede_opis, insegnamento_internal_id)
+                        insert_schede_opis(schede_opis, insegnamento_internal_id)
 
             except RuntimeError as e:
-                logger.error(
-                    "Errore inatteso durante l'analisi di una materia: %s", e)
+                logger.error("Errore inatteso durante l'analisi di una materia: %s", e)
             except mysql.connector.Error as e:
                 logger.error("Errore di database: %s", e, exc_info=True)
 
@@ -186,8 +182,7 @@ def run_scraper() -> None:
     try:
         for year in ACCADEMIC_YEARS:
             logger.info("==========================================")
-            logger.info(
-                " INIZIO ELABORAZIONE ANNO ACCADEMICO %d/%d ", year, year + 1)
+            logger.info(" INIZIO ELABORAZIONE ANNO ACCADEMICO %d/%d ", year, year + 1)
             logger.info("==========================================")
             logger.info(
                 "Chiamata API in corso per scaricare i dipartimenti del %d...", year
@@ -201,8 +196,7 @@ def run_scraper() -> None:
                 departments = random.sample(departments, campione)
 
             logger.info(
-                "Trovati %d dipartimenti per l'anno %d.", len(
-                    departments), year
+                "Trovati %d dipartimenti per l'anno %d.", len(departments), year
             )
 
             for department in departments:
