@@ -49,4 +49,4 @@ jobs:
         run: black --check --diff $(git ls-files '*.py')
 
       - name: Check code formatting with isort
-        run: isort --check-only --diff $(git ls-files '*.py')
+        run: isort --profile black --check-only --diff $(git ls-files '*.py')
