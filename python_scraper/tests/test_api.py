@@ -4,7 +4,13 @@ import pytest
 import requests.exceptions
 from pytest_mock import MockerFixture
 
-from src.api_client import get_activities, get_courses, get_departments, get_questions
+from src.api_client import (
+    ApiError,
+    get_activities,
+    get_courses,
+    get_departments,
+    get_questions,
+)
 from src.models import CorsoDiStudi, Dipartimento, Insegnamento, SchedaOpis
 
 
@@ -124,11 +130,10 @@ def test_get_departments_api_failure(mocker: MockerFixture, year: int) -> None:
     mock_post = mocker.patch("src.api_client.session.post")
     mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
-    # act
-    result = get_departments(year)
+    # act & assert
+    with pytest.raises(ApiError):
+        get_departments(year)
 
-    # assert
-    assert not result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
@@ -238,11 +243,10 @@ def test_get_courses_api_failure(
     mock_post = mocker.patch("src.api_client.session.post")
     mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
-    # act
-    result = get_courses(year, dept_code)
+    # act & assert
+    with pytest.raises(ApiError):
+        get_courses(year, dept_code)
 
-    # assert
-    assert not result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
@@ -343,11 +347,10 @@ def test_get_activities_api_failure(
     mock_post = mocker.patch("src.api_client.session.post")
     mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
-    # act
-    result = get_activities(year, dept_code, course_code)
+    # act & assert
+    with pytest.raises(ApiError):
+        get_activities(year, dept_code, course_code)
 
-    # assert
-    assert not result
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert args[0] == expected_url
@@ -476,13 +479,16 @@ def test_get_questions_failure(
 
     mock_post.side_effect = requests.exceptions.ConnectionError("API non raggiungibile")
 
-    # act
-    result = get_questions(
-        case.year, case.dept_code, case.course_code, case.activity_code, case.prof_tax
-    )
+    # act & assert
+    with pytest.raises(ApiError):
+        get_questions(
+            case.year,
+            case.dept_code,
+            case.course_code,
+            case.activity_code,
+            case.prof_tax,
+        )
 
-    # assert
-    assert not result
     mock_post.assert_called_once()
 
     args, kwargs = mock_post.call_args

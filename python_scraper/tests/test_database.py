@@ -110,6 +110,7 @@ def test_insert_course_failure(mock_db_connection, caplog) -> None:
 
 def test_insert_insegnamento(mock_db_connection) -> None:
     mock_conn, mock_cursor = mock_db_connection
+    mock_cursor.fetchone.return_value = None  # existence check: not found
     mock_cursor.lastrowid = 100
 
     ins = Insegnamento(
@@ -126,7 +127,7 @@ def test_insert_insegnamento(mock_db_connection) -> None:
 
     # assert
     assert result == 100
-    mock_cursor.execute.assert_called_once()
+    assert mock_cursor.execute.call_count == 2  # SELECT check + INSERT
     mock_conn.commit.assert_called_once()
 
 
@@ -150,6 +151,7 @@ def test_insert_insegnamento_failure(mock_db_connection, caplog) -> None:
 
 def test_insert_schede_opis(mock_db_connection) -> None:
     mock_conn, mock_cursor = mock_db_connection
+    mock_cursor.fetchone.return_value = (0,)  # COUNT(*) check: no existing records
     mock_cursor.rowcount = 1
 
     scheda = SchedaOpis(
@@ -186,6 +188,7 @@ def test_insert_schede_opis(mock_db_connection) -> None:
 
 def test_insert_schede_opis_failure(mock_db_connection, caplog) -> None:
     _, mock_cursor = mock_db_connection
+    mock_cursor.fetchone.return_value = (0,)  # COUNT(*) check: no existing records
     mock_cursor.executemany.side_effect = mysql.connector.Error("Errore DB")
     scheda = SchedaOpis(
         anno_accademico="2023/2024",
