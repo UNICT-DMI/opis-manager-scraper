@@ -22,20 +22,22 @@ from src.transformers import (
         # --- CASI CON PARENTESI ---
         ("Informatica (L-31)", "Informatica", "L-31"),
         ("Scienze Agrarie (LM-69)", "Scienze Agrarie", "LM-69"),
-        # --- CASI CON R (RIFORMATO) ---
+        # --- CASI CON R (RIFORMATO) — il suffisso " R" viene rimosso per
+        #     uniformare le classi ai formati pre-2021 (es. "LM-7" invece di
+        #     "LM-7 R"). ---
         (
             "Viticoltura, Enologia ed Enomarketing L-26 R",
             "Viticoltura, Enologia ed Enomarketing",
-            "L-26 R",
+            "L-26",
         ),
-        ("Biotecnologie Agrarie (LM-7 R)", "Biotecnologie Agrarie", "LM-7 R"),
+        ("Biotecnologie Agrarie (LM-7 R)", "Biotecnologie Agrarie", "LM-7"),
         # --- CASO GIURISPRUDENZA (LMG) ---
-        ("Giurisprudenza LMG/01 R", "Giurisprudenza", "LMG/01 R"),
+        ("Giurisprudenza LMG/01 R", "Giurisprudenza", "LMG/01"),
         # --- CASI CON PIÙ CLASSI (Virgole e sigle diverse) ---
         (
             "Sociologia e servizio sociale L-39 R, LM-40 R",
             "Sociologia e servizio sociale",
-            "L-39 R, LM-40 R",
+            "L-39, LM-40",
         ),
         ("Lettere (L-10, L-20)", "Lettere", "L-10, L-20"),
         # --- CASI CON PROFESSIONI SANITARIE (L/SNT) ---
@@ -49,13 +51,13 @@ from src.transformers import (
         ("Medicina e Chirurgia LMCU-41", "Medicina e Chirurgia", "LMCU-41"),
         # --- CASI MINUSCOLI (re.IGNORECASE) ---
         ("scienze motorie l/snt2", "scienze motorie", "L/SNT2"),
-        ("biologia l-13 r", "biologia", "L-13 R"),
+        ("biologia l-13 r", "biologia", "L-13"),
         # --- CASI SENZA CLASSE O VUOTI ---
         ("Storia Romana", "Storia Romana", ""),
         ("", "", ""),
         (None, "", ""),
         # --- CASI CON C.U. (Ciclo Unico esplicito) ---
-        ("Architettura LM-4 c.u. R", "Architettura", "LM-4 C.U. R"),
+        ("Architettura LM-4 c.u. R", "Architettura", "LM-4 C.U."),
         ("Farmacia (LM-41 cu)", "Farmacia", "LM-41 CU"),
         # --- CASO LIMITE (FALSO POSITIVO NEL NOME) ---
         ("Corso in L-Design L-4", "Corso in L-Design", "L-4"),
@@ -310,12 +312,19 @@ def test_parse_scheda_opis_data(mock_opis_json: dict[str, Any]) -> None:
     domande = scheda.get("domande")
     assert domande is not None
     assert scheda.get("totale_schede") == 12
-    assert len(domande) == 60
+    # Il nuovo formato allinea la struttura a quella pre-2021 della tabella
+    # schede_opis: 12 domande × 4 livelli Likert (R1..R4). R5 ("Non so") e
+    # R6 ("Non previste") NON sono contate perché il sistema OPIS dichiara
+    # esplicitamente che sono escluse dal calcolo delle medie.
+    assert len(domande) == 48
+    # Q1: R1=2 (offset 0), R4=8 (offset 3)
     assert domande[0] == 2
     assert domande[3] == 8
-    assert domande[7] == 5
-    assert domande[9] == 7
-    assert domande[11] == 6
+    # Q2: R3=5 (offset base_q2=4, +2), R5=7 (ignorata)
+    assert domande[6] == 5
+    assert domande[7] == 0  # R4 non risposta
+    # Q3: R2=6 (offset base_q3=8, +1)
+    assert domande[9] == 6
     eta = scheda.get("eta")
     assert eta is not None
     assert isinstance(eta, dict)
@@ -327,11 +336,22 @@ def test_parse_scheda_opis_data(mock_opis_json: dict[str, Any]) -> None:
     assert num_studenti is not None
     assert num_studenti.get("Fino a 25") == 6
     assert scheda.get("fc") == 4
+    anno_iscr = scheda.get("anno_iscr")
+    assert anno_iscr is not None
+    assert anno_iscr.get("In corso") == 20
+    assert anno_iscr.get("Fuori corso") == 4
     ragg_uni = scheda.get("ragg_uni")
     assert ragg_uni is not None
     assert ragg_uni.get("Da 1 a 30 minuti") == 20
     studio_gg = scheda.get("studio_gg")
     assert studio_gg is not None
     assert studio_gg.get("2 ore") == 8
+    # NF cluster only emits R5 answers, which are now ignored → domande_nf
+    # stays all-zero, ma totale_schede_nf riflette comunque le submissions.
+    assert scheda.get("totale_schede_nf") == 5
+    domande_nf = scheda.get("domande_nf")
+    assert domande_nf is not None
+    assert len(domande_nf) == 48
+    assert all(v == 0 for v in domande_nf)
     assert scheda.get("femmine_nf") == 5
     assert scheda.get("studio_tot") is None

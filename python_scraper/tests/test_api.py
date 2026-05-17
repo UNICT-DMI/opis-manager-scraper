@@ -400,15 +400,18 @@ def test_get_activities_api_failure(
                     totale_schede_nf=0,
                     fc=0,
                     inatt_nf=0,
-                    domande=[0] * 60,
-                    domande_nf=[0] * 60,
+                    domande=[0] * 48,
+                    domande_nf=[0] * 48,
                     motivo_nf=[],
                     sugg=[],
                     sugg_nf=[],
                 )
             ],
         ),
-        # CASO 2: Nessun dato trovato
+        # CASO 2: Nessun dato trovato — parse_scheda_opis_data filtra
+        # i record completamente vuoti (totale_schede == totale_schede_nf == 0)
+        # per non popolare il DB con righe inutili che il frontend mostrerebbe
+        # come "insegnamenti vuoti".
         GetQuestionsCase(
             year=2023,
             dept_code=190141,
@@ -425,21 +428,7 @@ def test_get_activities_api_failure(
                 "partCode": "null",
                 "professor": "",
             },
-            expected_result=[
-                SchedaOpis(
-                    anno_accademico="2023/2024",
-                    id_insegnamento=9999999,
-                    totale_schede=0,
-                    totale_schede_nf=0,
-                    fc=0,
-                    inatt_nf=0,
-                    domande=[0] * 60,
-                    domande_nf=[0] * 60,
-                    motivo_nf=[],
-                    sugg=[],
-                    sugg_nf=[],
-                )
-            ],
+            expected_result=[],
         ),
     ],
 )

@@ -2,7 +2,7 @@ import logging
 import os
 import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List
+from typing import List, Optional
 
 import mysql.connector
 from dotenv import load_dotenv
@@ -18,6 +18,7 @@ from src.api_client import (
 from src.database import (
     close_connection,
     connect_to_db,
+    delete_insegnamento_if_orphan,
     find_department_id,
     find_insegnamento_id,
     get_processed_activity_codes,
@@ -25,6 +26,7 @@ from src.database import (
     insert_department,
     insert_insegnamento,
     insert_schede_opis,
+    seed_domande,
 )
 from src.failure_tracker import clear_failures, log_failure, read_failures
 from src.models import CorsoDiStudi, Dipartimento, Insegnamento, SchedaOpis
@@ -38,6 +40,21 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "false").lower() in ("true", "1", "t")
 DEBUG_NUM_ACTIVITIES = int(os.getenv("DEBUG_NUM_ACTIVITIES", "5"))
 DEBUG_NUM_COURSES = int(os.getenv("DEBUG_NUM_COURSES", "1"))
 DEBUG_NUM_DEPARTMENTS = int(os.getenv("DEBUG_NUM_DEPARTMENTS", "1"))
+
+# Comma-separated filters that narrow the scrape to a specific subtree.
+# All three layers compose: e.g. setting FILTER_DEPT_CODES=190141 plus
+# FILTER_COURSE_CODES=0870106203100005 plus FILTER_ACTIVITY_CODES=1015132
+# fetches IT LAW only. Empty values mean "no filter at that layer".
+FILTER_DEPT_CODES = os.getenv("FILTER_DEPT_CODES", "").strip()
+FILTER_COURSE_CODES = os.getenv("FILTER_COURSE_CODES", "").strip()
+FILTER_ACTIVITY_CODES = os.getenv("FILTER_ACTIVITY_CODES", "").strip()
+
+
+def _parse_csv_codes(raw: str) -> Optional[set]:
+    """Parse a "1,2,3"-style env var. Returns None when no filter is set."""
+    if not raw:
+        return None
+    return {c.strip() for c in raw.split(",") if c.strip()}
 
 
 def assign_channels(activities: List[Insegnamento]) -> List[Insegnamento]:
@@ -74,7 +91,19 @@ def assign_channels(activities: List[Insegnamento]) -> List[Insegnamento]:
 
 def process_activity(
     year: int, dept_code: int, course_code: str, activity: Insegnamento
-) -> tuple[Insegnamento, List[SchedaOpis]]:
+) -> Optional[tuple[Insegnamento, List[SchedaOpis]]]:
+    """Fetch schede for one activity.
+
+    Returns:
+        None  — API error occurred; failure was logged for `--retry`. The
+                caller must keep the parent insegnamento row so the retry
+                pass can attach schede later via find_insegnamento_id.
+        (act, []) — call succeeded but the source has no Likert data for
+                    this activity (low-response privacy threshold, or
+                    teacher tax code missing). Caller may delete the
+                    orphan insegnamento row immediately.
+        (act, [scheda]) — schede ready to insert.
+    """
     if not activity.professor_tax:
         logger.warning("      [SKIP] %s: codice docente mancante.", activity.nome)
         return activity, []
@@ -99,7 +128,7 @@ def process_activity(
                 "id_modulo": activity.id_modulo,
             },
         )
-        return activity, []
+        return None
 
     if schede_opis:
         logger.info("      [OK] %d schede per %s.", len(schede_opis), activity.nome)
@@ -135,6 +164,17 @@ def _scrape_department(
             },
         )
         return
+
+    course_filter = _parse_csv_codes(FILTER_COURSE_CODES)
+    if course_filter is not None:
+        before = len(courses)
+        courses = [c for c in courses if c.unict_id in course_filter]
+        logger.info(
+            "Filtro FILTER_COURSE_CODES: %d/%d corsi in %s.",
+            len(courses),
+            before,
+            department.nome,
+        )
 
     if DEBUG_MODE and courses:
         courses = random.sample(courses, min(DEBUG_NUM_COURSES, len(courses)))
@@ -177,6 +217,25 @@ def _scrape_course(
     if not activities:
         teach_bar.reset(total=0)
         return
+
+    # Activity filter is applied BEFORE assign_channels so the canale
+    # assignment for the survivors stays stable. assign_channels groups by
+    # nome and would otherwise change canale numbers depending on which
+    # siblings were filtered out — that would break dedup against rows
+    # already in the DB.
+    activity_filter = _parse_csv_codes(FILTER_ACTIVITY_CODES)
+    if activity_filter is not None:
+        before = len(activities)
+        activities = [a for a in activities if str(a.codice_gomp) in activity_filter]
+        logger.info(
+            "Filtro FILTER_ACTIVITY_CODES: %d/%d attività in %s.",
+            len(activities),
+            before,
+            course.unict_id,
+        )
+        if not activities:
+            teach_bar.reset(total=0)
+            return
 
     if DEBUG_MODE and activities:
         activities = random.sample(
@@ -226,10 +285,19 @@ def _scrape_course(
             ins_id = futures[future]
             try:
                 result = future.result()
-                if result:
+                if result is None:
+                    # API error — failure logged; keep the orphan
+                    # insegnamento for the retry pass to attach to.
+                    pass
+                else:
                     _, schede_opis = result
                     if schede_opis:
                         insert_schede_opis(schede_opis, ins_id)
+                    else:
+                        # Source confirmed empty (privacy threshold or
+                        # missing prof tax). Drop the orphan row so it
+                        # doesn't surface as an empty teaching.
+                        delete_insegnamento_if_orphan(ins_id)
             except RuntimeError as e:
                 logger.error("Errore: %s", e)
             except mysql.connector.Error as e:
@@ -241,6 +309,7 @@ def run_scraper(year: int) -> None:
     logger.info("Avvio estrazione dati OPIS per l'anno %d/%d...", year, year + 1)
 
     connect_to_db()
+    seed_domande()
     clear_failures(year)
 
     try:
@@ -249,6 +318,17 @@ def run_scraper(year: int) -> None:
         except ApiError as e:
             logger.error("Impossibile scaricare i dipartimenti: %s", e)
             return
+
+        if FILTER_DEPT_CODES:
+            allowed = {int(c) for c in FILTER_DEPT_CODES.split(",") if c.strip()}
+            before = len(departments)
+            departments = [d for d in departments if d.unict_id in allowed]
+            logger.info(
+                "Filtro FILTER_DEPT_CODES=%s: %d/%d dipartimenti selezionati.",
+                FILTER_DEPT_CODES,
+                len(departments),
+                before,
+            )
 
         if DEBUG_MODE and departments:
             departments = random.sample(
@@ -313,6 +393,12 @@ def process_course(
     if not activities:
         return
 
+    activity_filter = _parse_csv_codes(FILTER_ACTIVITY_CODES)
+    if activity_filter is not None:
+        activities = [a for a in activities if str(a.codice_gomp) in activity_filter]
+        if not activities:
+            return
+
     if DEBUG_MODE and activities:
         activities = random.sample(
             activities, min(DEBUG_NUM_ACTIVITIES, len(activities))
@@ -346,10 +432,14 @@ def process_course(
             ins_id = futures[future]
             try:
                 result = future.result()
-                if result:
+                if result is None:
+                    pass  # API error — keep orphan for retry
+                else:
                     _, schede_opis = result
                     if schede_opis:
                         insert_schede_opis(schede_opis, ins_id)
+                    else:
+                        delete_insegnamento_if_orphan(ins_id)
             except RuntimeError as e:
                 logger.error("Errore: %s", e)
             except mysql.connector.Error as e:
@@ -405,6 +495,7 @@ def retry_failures(year: int) -> None:
     )
 
     connect_to_db()
+    seed_domande()
     clear_failures(year)
     formatted_year = f"{year}/{year + 1}"
 
@@ -516,9 +607,6 @@ def _retry_single_question(year: int, formatted_year: str, failure: dict) -> Non
         log_failure(year, failure)
         return
 
-    if not schede_opis:
-        return
-
     insegnamento_id = find_insegnamento_id(
         codice_gomp=activity_code,
         anno_accademico=formatted_year,
@@ -527,11 +615,22 @@ def _retry_single_question(year: int, formatted_year: str, failure: dict) -> Non
         course_unict_id=course_code,
     )
 
-    if insegnamento_id != -1:
-        insert_schede_opis(schede_opis, insegnamento_id)
-        logger.info("[RETRY OK] Schede inserite per activity %d.", activity_code)
-    else:
+    if insegnamento_id == -1:
         logger.warning(
             "[RETRY SKIP] Insegnamento non trovato nel DB per activity %d.",
             activity_code,
         )
+        return
+
+    if schede_opis:
+        insert_schede_opis(schede_opis, insegnamento_id)
+        logger.info("[RETRY OK] Schede inserite per activity %d.", activity_code)
+    else:
+        # The retry confirmed the source has no Likert data — the original
+        # ApiError was a transient failure, not a real gap. Drop the orphan
+        # so it doesn't linger as an empty teaching.
+        if delete_insegnamento_if_orphan(insegnamento_id):
+            logger.info(
+                "[RETRY EMPTY] activity %d: nessun dato, insegnamento rimosso.",
+                activity_code,
+            )

@@ -32,6 +32,12 @@ def parse_course_name(full_name: Optional[str]) -> Tuple[str, str]:
         if nome.endswith("-"):
             nome = nome[:-1].strip()
 
+        # The post-2021 API appends " R" ("Riformato") to every class code
+        # (e.g. "LM-7 R", "L-39 R, LM-40 R"). Pre-2021 data stored plain
+        # "LM-7" / "L-39, LM-40", so strip the suffix from every comma-
+        # separated class code to keep both eras comparable.
+        classe = re.sub(r"\s+R(?=,|$)", "", classe)
+
         return nome, classe
 
     return full_name, ""
@@ -86,12 +92,22 @@ def _aggiorna_statistica_json(
             record[campo][lbl] = record[campo].get(lbl, 0) + int(values[i])
 
 
+# OPIS uses a 4-level Likert scale (R1..R4). R5 "Non so" and R6 "Non previste"
+# are collected by the survey but are explicitly excluded from evaluation
+# (see API HTML: "le risposte 'non so' e 'non previste' non sono computate
+# ai fini del calcolo"), so we drop them here to stay aligned with the
+# pre-2021 data shape consumed by opis-manager-core / OPIS-Manager frontend.
+NUM_QUESTIONS = 12
+NUM_ANSWERS = 4
+DOMANDE_LEN = NUM_QUESTIONS * NUM_ANSWERS
+
+
 def _process_cluster_data(cluster: Dict[str, Any], record: Dict[str, Any]) -> None:
     cluster_info = cluster.get("cluster", {})
     cluster_name = cluster_info.get("Text", "").lower()
     is_nf = "non frequentanti" in cluster_name
 
-    domande_flat = [0] * 60
+    domande_flat = [0] * DOMANDE_LEN
     totale_schede = 0
     questions = cluster.get("questions", [])
 
@@ -105,13 +121,13 @@ def _process_cluster_data(cluster: Dict[str, Any], record: Dict[str, Any]) -> No
         except ValueError:
             continue
 
-        if q_idx < 0 or q_idx >= 12:
+        if q_idx < 0 or q_idx >= NUM_QUESTIONS:
             continue
 
         subs = q.get("submissions", 0)
         totale_schede = max(totale_schede, subs)
 
-        base_offset = q_idx * 5
+        base_offset = q_idx * NUM_ANSWERS
         for ans in q.get("answers", []):
             a_code = ans.get("answerCode")
             count = ans.get("count", 0)
@@ -126,8 +142,6 @@ def _process_cluster_data(cluster: Dict[str, Any], record: Dict[str, Any]) -> No
                     offset = 2
                 case "R4":
                     offset = 3
-                case "R5":
-                    offset = 4
 
             if offset >= 0:
                 domande_flat[base_offset + offset] = count
@@ -178,12 +192,13 @@ def _process_graph_pie(
             else:
                 record["femmine"] = (record.get("femmine") or 0) + femmine_count
 
-        case lbl if any(k in lbl for k in ["fuori corso", "iscrizione"]):
+        case lbl if any(k in lbl for k in ["fuori corso", "iscrizione", "anno di iscr"]):
             fc_count = 0
             for i, lbl_fc in enumerate(labels):
                 if "fuori corso" in lbl_fc.lower() and i < len(values):
                     fc_count += int(values[i])
             record["fc"] += fc_count
+            _aggiorna_statistica_json(record, "anno_iscr", labels, values)
 
         case _:
             pass
@@ -198,8 +213,8 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         "totale_schede_nf": 0,
         "fc": 0,
         "inatt_nf": 0,
-        "domande": [0] * 60,
-        "domande_nf": [0] * 60,
+        "domande": [0] * DOMANDE_LEN,
+        "domande_nf": [0] * DOMANDE_LEN,
         "motivo_nf": [],
         "sugg": [],
         "sugg_nf": [],
@@ -223,8 +238,16 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         for pie in graph.get("dataPie", []):
             _process_graph_pie(pie, is_nf_graph, record)
 
-    for campo in ["eta", "num_studenti", "studio_gg", "studio_tot", "ragg_uni"]:
+    for campo in ["eta", "num_studenti", "studio_gg", "studio_tot", "ragg_uni", "anno_iscr"]:
         if not record[campo]:
             record[campo] = None
+
+    # Skip activities for which neither cluster produced usable Likert data.
+    # The API returns the two cluster headers (Frequentanti / Non Frequentanti)
+    # even when response counts are too low to publish per-question detail
+    # (a privacy threshold), so we'd otherwise insert a row of all zeros and
+    # pollute the /insegnamenti API output with apparent "empty" teachings.
+    if record["totale_schede"] == 0 and record["totale_schede_nf"] == 0:
+        return []
 
     return [record]

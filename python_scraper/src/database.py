@@ -53,6 +53,56 @@ def close_connection() -> None:
         logger.info("Connessione al database chiusa.")
 
 
+# Mirrors opis-manager-core/config/opis.php:`domande`. Kept in sync with the
+# Laravel StandardWeightSeeder so a fresh DB scraped by this tool alone has
+# the weights the frontend needs to compute V1/V2/V3 scores (an empty
+# `domanda` table causes the Angular graph service to crash).
+_DEFAULT_DOMANDE = [
+    (1, 0.7, "V1"),
+    (2, 0.3, "V1"),
+    (3, 0.1, "V3"),
+    (4, 0.1, "V2"),
+    (5, 0.3, "V2"),
+    (6, 0.5, "V3"),
+    (7, 0.4, "V3"),
+    (8, 0.0, None),
+    (9, 0.3, "V2"),
+    (10, 0.3, "V2"),
+    (11, 0.0, None),
+    (12, 0.0, None),
+]
+
+
+def seed_domande() -> None:
+    """Ensure the `domanda` table holds the 12 default-weight rows.
+
+    Idempotent: uses INSERT IGNORE keyed on the primary key, so rows that
+    already exist (e.g. after a Laravel seeder run) are left untouched,
+    including any custom peso_standard/gruppo edits made through the API.
+    """
+    with _db_lock:
+        if not _connection:
+            logger.error("Database non connesso. Chiama connect_to_db() prima.")
+            return
+
+        try:
+            cursor = _connection.cursor()
+            cursor.executemany(
+                """INSERT IGNORE INTO domanda (id, peso_standard, gruppo, created_at, updated_at)
+                   VALUES (%s, %s, %s, NOW(), NOW())""",
+                _DEFAULT_DOMANDE,
+            )
+            _connection.commit()
+            inserted = cursor.rowcount
+            cursor.close()
+            if inserted > 0:
+                logger.info("Seed `domanda`: %d righe inserite.", inserted)
+            else:
+                logger.info("Seed `domanda`: tabella già popolata, nessuna modifica.")
+        except Error as e:
+            logger.error("Errore DB durante il seeding di `domanda`: %s", e)
+
+
 def insert_department(department) -> int:
     with _db_lock:
         if not _connection:
@@ -139,17 +189,27 @@ def insert_insegnamento(insegnamento, corso_internal_id: int) -> int:
         try:
             cursor = _connection.cursor()
 
-            # Check if already exists (idempotent for retry safety)
+            # Idempotent for re-runs / retries. The natural key for an
+            # insegnamento row is (codice_gomp, anno_accademico, id_cds,
+            # docente, id_modulo, nome_modulo): the same teacher may teach
+            # multiple distinct modules of the same activity inside one CDS,
+            # and partCode from the API is always null (id_modulo=0), so
+            # nome_modulo is the only field that distinguishes them.
+            # `<=>` is NULL-safe equality — required because nome_modulo is
+            # NULL for single-module activities and plain `= NULL` never
+            # matches, which is the bug that produced 4× duplicates per run.
             cursor.execute(
                 "SELECT id FROM insegnamento "
                 "WHERE codice_gomp = %s AND anno_accademico = %s "
-                "AND id_cds = %s AND docente = %s AND id_modulo = %s LIMIT 1",
+                "AND id_cds = %s AND docente = %s AND id_modulo = %s "
+                "AND nome_modulo <=> %s LIMIT 1",
                 (
                     insegnamento.codice_gomp,
                     insegnamento.anno_accademico,
                     corso_internal_id,
                     insegnamento.docente,
                     insegnamento.id_modulo,
+                    insegnamento.nome_modulo,
                 ),
             )
             existing = cursor.fetchone()
@@ -247,6 +307,43 @@ def insert_schede_opis(schede_opis: list, insegnamento_internal_id: int) -> int:
                 e,
             )
             return -1
+
+
+def delete_insegnamento_if_orphan(insegnamento_internal_id: int) -> bool:
+    """Delete an insegnamento row, but only if it has no schede_opis attached.
+
+    Called when the source API confirms there is no Likert data for the
+    activity (e.g. UNICT's per-question privacy threshold suppresses it):
+    keeping the bare insegnamento row would surface as an "empty teaching"
+    in the frontend. The `IS NULL` join is a safety net — we never want a
+    deletion racing against a concurrent schede_opis insert to silently
+    destroy real data.
+
+    Returns True if a row was deleted.
+    """
+    with _db_lock:
+        if not _connection or insegnamento_internal_id <= 0:
+            return False
+
+        try:
+            cursor = _connection.cursor()
+            cursor.execute(
+                """DELETE i FROM insegnamento i
+                   LEFT JOIN schede_opis s ON s.id_insegnamento = i.id
+                   WHERE i.id = %s AND s.id IS NULL""",
+                (insegnamento_internal_id,),
+            )
+            _connection.commit()
+            deleted = cursor.rowcount > 0
+            cursor.close()
+            return deleted
+        except Error as e:
+            logger.error(
+                "Errore DB durante l'eliminazione dell'insegnamento orfano %d: %s",
+                insegnamento_internal_id,
+                e,
+            )
+            return False
 
 
 def get_processed_activity_codes(
