@@ -187,6 +187,28 @@ def _scrape_department(
         course_bar.update(1)
 
 
+def _consume_activity_future(future, ins_id: int) -> None:
+    """Apply the result of a process_activity future to the DB."""
+    try:
+        result = future.result()
+        if result is None:
+            # API error — failure logged; keep the orphan
+            # insegnamento for the retry pass to attach to.
+            return
+        _, schede_opis = result
+        if schede_opis:
+            insert_schede_opis(schede_opis, ins_id)
+        else:
+            # Source confirmed empty (privacy threshold or missing prof
+            # tax). Drop the orphan row so it doesn't surface as an empty
+            # teaching.
+            delete_insegnamento_if_orphan(ins_id)
+    except RuntimeError as e:
+        logger.error("Errore: %s", e)
+    except mysql.connector.Error as e:
+        logger.error("Errore DB: %s", e, exc_info=True)
+
+
 def _scrape_course(
     year: int,
     dept_code: int,
@@ -282,26 +304,7 @@ def _scrape_course(
         }
 
         for future in as_completed(futures):
-            ins_id = futures[future]
-            try:
-                result = future.result()
-                if result is None:
-                    # API error — failure logged; keep the orphan
-                    # insegnamento for the retry pass to attach to.
-                    pass
-                else:
-                    _, schede_opis = result
-                    if schede_opis:
-                        insert_schede_opis(schede_opis, ins_id)
-                    else:
-                        # Source confirmed empty (privacy threshold or
-                        # missing prof tax). Drop the orphan row so it
-                        # doesn't surface as an empty teaching.
-                        delete_insegnamento_if_orphan(ins_id)
-            except RuntimeError as e:
-                logger.error("Errore: %s", e)
-            except mysql.connector.Error as e:
-                logger.error("Errore DB: %s", e, exc_info=True)
+            _consume_activity_future(future, futures[future])
             teach_bar.update(1)
 
 
@@ -429,21 +432,7 @@ def process_course(
             for activity, ins_id in to_process
         }
         for future in as_completed(futures):
-            ins_id = futures[future]
-            try:
-                result = future.result()
-                if result is None:
-                    pass  # API error — keep orphan for retry
-                else:
-                    _, schede_opis = result
-                    if schede_opis:
-                        insert_schede_opis(schede_opis, ins_id)
-                    else:
-                        delete_insegnamento_if_orphan(ins_id)
-            except RuntimeError as e:
-                logger.error("Errore: %s", e)
-            except mysql.connector.Error as e:
-                logger.error("Errore DB: %s", e, exc_info=True)
+            _consume_activity_future(future, futures[future])
 
 
 def process_department(year: int, department: Dipartimento) -> None:
@@ -479,7 +468,7 @@ def process_department(year: int, department: Dipartimento) -> None:
         for future in as_completed(futures):
             try:
                 future.result()
-            except Exception as e:
+            except (RuntimeError, mysql.connector.Error) as e:
                 logger.error("Errore nel corso: %s", e)
 
 
@@ -587,7 +576,7 @@ def _retry_questions_batch(year: int, formatted_year: str, failures: list) -> No
             for future in as_completed(futures):
                 try:
                     future.result()
-                except Exception as e:
+                except (RuntimeError, mysql.connector.Error) as e:
                     logger.error("[RETRY] Errore: %s", e)
                 pbar.update(1)
 

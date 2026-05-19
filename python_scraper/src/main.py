@@ -15,7 +15,9 @@ class TqdmLoggingHandler(logging.Handler):
         try:
             msg = self.format(record)
             tqdm.write(msg)
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Mirrors logging.Handler.emit(): swallow any error so a logging
+            # failure can never crash the caller.
             self.handleError(record)
 
 
