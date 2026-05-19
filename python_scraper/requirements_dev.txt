@@ -7,5 +7,6 @@ pylint
 pylint-pytest
 mypy
 types-requests
+types-tqdm
 flake8
 isort

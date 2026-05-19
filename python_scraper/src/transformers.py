@@ -192,7 +192,9 @@ def _process_graph_pie(
             else:
                 record["femmine"] = (record.get("femmine") or 0) + femmine_count
 
-        case lbl if any(k in lbl for k in ["fuori corso", "iscrizione", "anno di iscr"]):
+        case lbl if any(
+            k in lbl for k in ["fuori corso", "iscrizione", "anno di iscr"]
+        ):
             fc_count = 0
             for i, lbl_fc in enumerate(labels):
                 if "fuori corso" in lbl_fc.lower() and i < len(values):
@@ -238,7 +240,14 @@ def parse_scheda_opis_data(json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         for pie in graph.get("dataPie", []):
             _process_graph_pie(pie, is_nf_graph, record)
 
-    for campo in ["eta", "num_studenti", "studio_gg", "studio_tot", "ragg_uni", "anno_iscr"]:
+    for campo in [
+        "eta",
+        "num_studenti",
+        "studio_gg",
+        "studio_tot",
+        "ragg_uni",
+        "anno_iscr",
+    ]:
         if not record[campo]:
             record[campo] = None
 

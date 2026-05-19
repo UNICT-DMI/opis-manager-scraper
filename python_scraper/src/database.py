@@ -215,7 +215,7 @@ def insert_insegnamento(insegnamento, corso_internal_id: int) -> int:
             existing = cursor.fetchone()
             if existing:
                 cursor.close()
-                return existing[0]
+                return existing[0]  # type: ignore
 
             sql = """
                 INSERT INTO insegnamento
@@ -361,7 +361,7 @@ def get_processed_activity_codes(
                    WHERE i.id_cds = %s AND i.anno_accademico = %s""",
                 (corso_internal_id, anno_accademico),
             )
-            result = {row[0] for row in cursor.fetchall()}
+            result: set[int] = {row[0] for row in cursor.fetchall()}  # type: ignore
             cursor.close()
             return result
         except Error as e:
