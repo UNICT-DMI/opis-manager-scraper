@@ -11,8 +11,13 @@ def test_tqdm_logging_handler_emits_via_tqdm_write(mocker) -> None:
     mock_write = mocker.patch("src.main.tqdm.write")
     handler = main.TqdmLoggingHandler()
     record = logging.LogRecord(
-        name="t", level=logging.INFO, pathname="", lineno=0,
-        msg="hello", args=(), exc_info=None,
+        name="t",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="hello",
+        args=(),
+        exc_info=None,
     )
 
     handler.emit(record)
@@ -26,8 +31,13 @@ def test_tqdm_logging_handler_falls_back_on_error(mocker) -> None:
     handler = main.TqdmLoggingHandler()
     handle_error = mocker.patch.object(handler, "handleError")
     record = logging.LogRecord(
-        name="t", level=logging.INFO, pathname="", lineno=0,
-        msg="x", args=(), exc_info=None,
+        name="t",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="x",
+        args=(),
+        exc_info=None,
     )
 
     handler.emit(record)

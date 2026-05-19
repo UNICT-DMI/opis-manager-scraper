@@ -24,7 +24,7 @@ def test_log_failure_writes_jsonl(failures_dir) -> None:
 
 
 def test_read_failures_returns_empty_when_no_file(failures_dir) -> None:
-    assert failure_tracker.read_failures(2099) == []
+    assert not failure_tracker.read_failures(2099)
 
 
 def test_read_failures_parses_jsonl_and_skips_invalid(failures_dir, caplog) -> None:
